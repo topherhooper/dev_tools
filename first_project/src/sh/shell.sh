@@ -1,0 +1,2 @@
+# mounting - https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount
+docker run  -u $(id -u):$(id -g) --rm -it --network="host" --mount type=bind,source="$(pwd)",target=/tf/app --entrypoint=bash thooper-linux-local
