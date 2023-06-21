@@ -3,12 +3,17 @@ import namedtuple
 
 BrainMessage = namedtuple("BrainMessage", "user message")
 
-"""
+# count tokens:
+# https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
 
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Who won the world series in 2020?"},
-        {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
-"""
+ChatGPTModel: str = "gpt-4"
+
+
+def num_tokens_from_string(string: str, model: str = ChatGPTModel) -> int:
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 
 class ConversationHistory:
