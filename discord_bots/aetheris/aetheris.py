@@ -14,8 +14,7 @@ aetheris_brain = Brain(prompt_name="aetheris")
 allowed_channel_ids = [799792721404887050]  # play-with-bots,
 
 # Define the rate limit parameters
-RATE_LIMIT = 5  # Number of messages allowed within the cooldown period
-COOLDOWN_SECONDS = 60  # Cooldown period in seconds
+RATE_LIMIT = 5  # min delta between message
 
 # Define a dictionary to store user timestamps
 user_timestamps = {}
@@ -40,7 +39,7 @@ class DiscordBot(discord.Client):
             elapsed_time = current_timestamp - last_timestamp
 
             # Check if the cooldown period has not expired
-            if elapsed_time < timedelta(seconds=COOLDOWN_SECONDS):
+            if elapsed_time < timedelta(seconds=RATE_LIMIT):
                 return False
 
         # Update the user's timestamp in the dictionary
@@ -55,7 +54,7 @@ class DiscordBot(discord.Client):
         # send a personalized message.
         user_name = message.author.name
         please_wait_message = (
-            f"{user_name}, please wait a bit before sending another message."
+            f"{user_name}! Please be patient! I'm getting to that. Wait a bit before sending another message."
         )
         patience_message = f"You've gotten this warning {tries_with_user} times. You get 3 warnings before you're ignored."
         await message.channel.send(f"{please_wait_message} {patience_message}")
@@ -64,7 +63,7 @@ class DiscordBot(discord.Client):
         if message.author == self.user:
             return
         tries_with_user = user_testing_patience[message.author.id]
-        if tries_with_user > MAX_WARNINGS:
+        if tries_with_user >= MAX_WARNINGS:
             return
         # Check if the message is sent in an allowed channel or in a DM
         if (
