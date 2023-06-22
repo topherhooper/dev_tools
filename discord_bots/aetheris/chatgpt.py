@@ -40,7 +40,6 @@ class ConversationHistory:
         self.conversation_history.append(
             {"role": "user", "content": message},
         )
-        print(message)
 
     def set_system(
         self, seed_prompts: typing.Optional[typing.List[typing.Dict[str, str]]] = None
@@ -72,7 +71,6 @@ class Brain:
             model=ChatGPTModel, messages=self.conversation_history.get()
         )
         response = completion.choices[0].message.content
-        print(response)
 
         self.conversation_history.reponse_says(response)
         return response
