@@ -1,7 +1,19 @@
 from collections import namedtuple
 import openai
 import typing
+import json
 from credentials import get_credentials
+
+
+def load_prompts(prompt_name: str):
+    prompt_filepath = (
+        f"/workspace/dev_tools/discord_bots/aetheris/prompts/{prompt_name}.json"
+    )
+    print(prompt_filepath)
+    with open(prompt_filepath, "r") as f:
+        prompts = json.load(f)
+    return prompts
+
 
 BrainMessage = namedtuple("BrainMessage", "user message")
 
@@ -9,7 +21,6 @@ BrainMessage = namedtuple("BrainMessage", "user message")
 # https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
 
 ChatGPTModel: str = "gpt-3.5-turbo"
-# ChatGPTModel: str = "text-davinci-003"
 
 
 def num_tokens_from_string(string: str, model: str = ChatGPTModel) -> int:
@@ -20,9 +31,10 @@ def num_tokens_from_string(string: str, model: str = ChatGPTModel) -> int:
 
 
 class ConversationHistory:
-    def __init__(self, system: typing.Optional[str] = None):
+    def __init__(self, prompt_name: str = None):
+        seed_prompts = load_prompts(prompt_name)
         self.conversation_history = []
-        self.set_system(system=system)
+        self.set_system(seed_prompts=seed_prompts)
 
     def user_says(self, message):
         self.conversation_history.append(
@@ -30,13 +42,14 @@ class ConversationHistory:
         )
         print(message)
 
-    def set_system(self, system: typing.Optional[str] = None):
-        if system is None:
-            system = "You are a helpful assistant."
-        # Append the new message to the conversation history
-        self.conversation_history.append(
-            {"role": "system", "content": system},
-        )
+    def set_system(
+        self, seed_prompts: typing.Optional[typing.List[typing.Dict[str, str]]] = None
+    ):
+        if seed_prompts is None:
+            seed_prompts = (
+                {"role": "system", "content": "You are a helpful assistant."},
+            )
+        self.conversation_history = seed_prompts
 
     def reponse_says(self, message):
         self.conversation_history.append(
@@ -48,8 +61,8 @@ class ConversationHistory:
 
 
 class Brain:
-    def __init__(self, system: str):
-        self.conversation_history = ConversationHistory(system=system)
+    def __init__(self, prompt_name: str):
+        self.conversation_history = ConversationHistory(prompt_name=prompt_name)
         openai.api_key = get_credentials()["Aetheris"]["openai"]
 
     def get_brain_response(self, message):

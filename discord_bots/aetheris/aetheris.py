@@ -7,9 +7,7 @@ import typing
 
 intents = discord.Intents.default()
 intents.message_content = True
-aetheris_brain = Brain(
-    system="Your name is Aetheris. You are a historian NPC within a fantasy world."
-)
+aetheris_brain = Brain(prompt_name="aetheris")
 
 allowed_channel_ids = [799792721404887050]  # play-with-bots,
 
