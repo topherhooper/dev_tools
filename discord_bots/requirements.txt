@@ -1,3 +1,4 @@
 black
 discord.py
 pyyaml
+openai
