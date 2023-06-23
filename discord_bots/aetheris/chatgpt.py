@@ -32,11 +32,14 @@ def num_tokens_from_string(string: str, model: str = ChatGPTModel) -> int:
 
 class ConversationHistory:
     def __init__(self, prompt_name: str = None):
-        seed_prompts = load_prompts(prompt_name)
+        if prompt_name:
+            seed_prompts = load_prompts(prompt_name)
+        else:
+            seed_prompts = None
         self.conversation_history = []
         self.set_system(seed_prompts=seed_prompts)
 
-    def user_says(self, message):
+    def user_says(self, message: str):
         self.conversation_history.append(
             {"role": "user", "content": message},
         )
@@ -45,12 +48,12 @@ class ConversationHistory:
         self, seed_prompts: typing.Optional[typing.List[typing.Dict[str, str]]] = None
     ):
         if seed_prompts is None:
-            seed_prompts = (
+            seed_prompts = [
                 {"role": "system", "content": "You are a helpful assistant."},
-            )
+            ]
         self.conversation_history = seed_prompts
 
-    def reponse_says(self, message):
+    def reponse_says(self, message: str):
         self.conversation_history.append(
             {"role": "assistant", "content": message},
         )
@@ -60,11 +63,11 @@ class ConversationHistory:
 
 
 class Brain:
-    def __init__(self, prompt_name: str, api_key:str):
+    def __init__(self, api_key: str, prompt_name: str = ""):
         self.conversation_history = ConversationHistory(prompt_name=prompt_name)
         openai.api_key = api_key
 
-    def get_brain_response(self, message):
+    def get_brain_response(self, message: str):
         self.conversation_history.user_says(message=message)
         # Generate response using ChatGPT
         completion = openai.ChatCompletion.create(

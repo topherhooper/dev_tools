@@ -9,6 +9,7 @@ def get_credentials() -> typing.Dict:
         config = yaml.safe_load(f)
     return config
 
+
 def get_discord_token():
     credentials = get_credentials()
     return credentials["shared_bot"]["discord"]

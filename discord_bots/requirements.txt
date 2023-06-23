@@ -2,3 +2,4 @@ black
 discord.py
 pyyaml
 openai
+pytest

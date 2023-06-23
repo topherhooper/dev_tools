@@ -54,9 +54,7 @@ class BrainBot(discord.Client):
 
         # send a personalized message.
         user_name = message.author.name
-        please_wait_message = (
-            f"{user_name}! Please be patient! I'm getting to that. Wait a bit before sending another message."
-        )
+        please_wait_message = f"{user_name}! Please be patient! I'm getting to that. Wait a bit before sending another message."
         patience_message = f"You've gotten this warning {tries_with_user} times. You get 3 warnings before you're ignored."
         await message.channel.send(f"{please_wait_message} {patience_message}")
 
@@ -94,4 +92,3 @@ class BrainBot(discord.Client):
     async def greet(self, message):
         author = message.author
         await message.channel.send(f"Hello, {author.mention}!")
-
