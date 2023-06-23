@@ -60,9 +60,8 @@ class ConversationHistory:
 
 
 class Brain:
-    def __init__(self, prompt_name: str):
+    def __init__(self, prompt_name: str, api_key:str):
         self.conversation_history = ConversationHistory(prompt_name=prompt_name)
-        openai.api_key = get_credentials()["Aetheris"]["openai"]
 
     def get_brain_response(self, message):
         self.conversation_history.user_says(message=message)
