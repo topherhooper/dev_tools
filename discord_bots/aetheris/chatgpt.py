@@ -31,11 +31,9 @@ def num_tokens_from_string(string: str, model: str = ChatGPTModel) -> int:
 
 
 class ConversationHistory:
-    def __init__(self, prompt_name: str = None):
-        if prompt_name:
-            seed_prompts = load_prompts(prompt_name)
-        else:
-            seed_prompts = None
+    def __init__(
+        self, seed_prompts: typing.Optional[typing.List[typing.Dict[str, str]]] = None
+    ):
         self.conversation_history = []
         self.set_system(seed_prompts=seed_prompts)
 
@@ -63,8 +61,14 @@ class ConversationHistory:
 
 
 class Brain:
-    def __init__(self, api_key: str, prompt_name: str = ""):
-        self.conversation_history = ConversationHistory(prompt_name=prompt_name)
+    def __init__(
+        self, api_key: str, prompt_names: typing.Optional[typing.List[str]] = []
+    ):
+        seed_prompts = []
+        for prompt_name in prompt_names:
+            named_prompt = load_prompts(prompt_name)
+            seed_prompts += named_prompt
+        self.conversation_history = ConversationHistory(seed_prompts)
         openai.api_key = api_key
 
     def get_brain_response(self, message: str):

@@ -41,11 +41,11 @@ class BrainBot(discord.Client):
 
             # Check if the cooldown period has not expired
             if elapsed_time < timedelta(seconds=RATE_LIMIT):
-                return False
+                return True
 
         # Update the user's timestamp in the dictionary
         user_timestamps[message.author.id] = current_timestamp
-        return True
+        return False
 
     async def message_abuse(self, message):
         # Inform the user about the cooldown period
@@ -64,11 +64,13 @@ class BrainBot(discord.Client):
         tries_with_user = user_testing_patience[message.author.id]
         if tries_with_user >= MAX_WARNINGS:
             return
+
         # Check if the message is sent in an allowed channel or in a DM
-        if (
-            message.channel.id not in allowed_channel_ids
-            and message.channel.type != discord.ChannelType.private
-        ):
+        is_dm = bool(message.channel.type == discord.ChannelType.private)
+        is_allowed_channel = bool(message.channel.id in allowed_channel_ids)
+        is_bot_addressed = bool(self.user.mentioned_in(message) or is_dm)
+
+        if not is_allowed_channel and not is_bot_addressed:
             return
 
         if (
@@ -76,8 +78,9 @@ class BrainBot(discord.Client):
             or message.content.startswith(f"{self.user.name}")
             or (message.channel.type == discord.ChannelType.private)
         ):
-            check_user_abuse = self.check_user_rate(message)
-            if not check_user_abuse:
+            print(f"Replying to {message.author.name}")
+            is_abusive_user = self.check_user_rate(message)
+            if is_abusive_user:
                 await self.message_abuse(message)
                 return
             await self.ask_brain(message)
@@ -85,10 +88,3 @@ class BrainBot(discord.Client):
     async def ask_brain(self, message: str):
         brain_response = self.brain.get_brain_response(message=message.content)
         await message.channel.send(brain_response)
-
-    async def ping(self, message):
-        await message.channel.send("Pong!")
-
-    async def greet(self, message):
-        author = message.author
-        await message.channel.send(f"Hello, {author.mention}!")
