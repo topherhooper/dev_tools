@@ -1,7 +1,5 @@
-# This example requires the 'message_content' intent.
 from credentials import get_discord_token, get_openai_token
 from chatgpt import Brain
-import typing
 from brain_bot import BrainBot, DEFAULT_INTENTS
 
 
@@ -22,7 +20,7 @@ class Talmorion:
 
 
 def talmorion():
-    brain_bot = Aetheris()
+    brain_bot = Talmorion()
     brain_bot.run()
 
 

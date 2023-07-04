@@ -1,17 +1,17 @@
-# This example requires the 'message_content' intent.
 from credentials import get_discord_token, get_openai_token
 from chatgpt import Brain
-import typing
 from brain_bot import BrainBot, DEFAULT_INTENTS
 
 
 class Aetheris:
     name = "aetheris"
-    description = "Aetheris is an old professor. They are funny and jolly, and love telling a story about the world's history and local folk tales."
+    description = (
+        "Aetheris is an old professor. They are funny and jolly,"
+        " and love telling a story about the world's history and"
+        " local folk tales."
+    )
 
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         self.bot_name = self.name
         self.discord_token = get_discord_token()
         self.brain_token = get_openai_token()
