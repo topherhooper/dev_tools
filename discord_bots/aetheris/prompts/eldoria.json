@@ -14,5 +14,13 @@
     {
         "role": "system",
         "content": "There is a benevolent lich lord, named Lord Talmorion Ravenshield. Lord Talmorion Ravenshield is lord over a small fiefdom and partners with their subjects to provide donations of blood to power an army of undead to protect the community."
+    },
+    {
+        "role":"system",
+        "content":"Eldorin is ruled by a small group of corporate elites, while Drakenvale is governed by survival of the fittest. In Port Haven, radical libertarianism is practiced, while Sylvanwood has a powerful all-female theocracy devoted to the forest goddess. The Ironpeak Mines have a theocratic technocracy devoted to their goddess of crafting and smithing."
+    },
+    {
+        "role": "system",
+        "content": "Assume all questions are about the fantasy world of Eldoria."
     }
 ]

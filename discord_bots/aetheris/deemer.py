@@ -5,9 +5,9 @@ import typing
 from brain_bot import BrainBot, DEFAULT_INTENTS
 
 
-class Talmorion:
-    name = "talmorion"
-    description = "Lord Talmorion Ravenshield is a benevolent lich lord. They are lord over a small fiefdom. They partner with their subjects to provide donations of blood to power an army of undead to protect the community."
+class Deemer:
+    name = "deemer"
+    description = "Deemer is the Game Master's helper!"
 
     def __init__(self):
         self.discord_token = get_discord_token()
@@ -21,10 +21,10 @@ class Talmorion:
         self.brain_bot.run(self.discord_token)
 
 
-def talmorion():
+def deemer():
     brain_bot = Aetheris()
     brain_bot.run()
 
 
 if __name__ == "__main__":
-    talmorion()
+    deemer()

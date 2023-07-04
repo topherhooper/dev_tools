@@ -17,6 +17,7 @@ RATE_LIMIT = 5  # min delta between message
 user_timestamps = {}
 user_testing_patience = defaultdict(int)
 MAX_WARNINGS = 3
+MAX_DISCORD_LENGTH = 2000
 
 
 class BrainBot(discord.Client):
@@ -78,7 +79,7 @@ class BrainBot(discord.Client):
             or message.content.startswith(f"{self.user.name}")
             or (message.channel.type == discord.ChannelType.private)
         ):
-            print(f"Replying to {message.author.name}")
+            print(f"[{datetime.now()}] Replying to {message.author.name}")
             is_abusive_user = self.check_user_rate(message)
             if is_abusive_user:
                 await self.message_abuse(message)
@@ -87,4 +88,11 @@ class BrainBot(discord.Client):
 
     async def ask_brain(self, message: str):
         brain_response = self.brain.get_brain_response(message=message.content)
-        await message.channel.send(brain_response)
+        response_length = len(brain_response)
+        if response_length > MAX_DISCORD_LENGTH:
+            for i in range(0, response_length, MAX_DISCORD_LENGTH):
+                brain_response_chunk = brain_response[i : i + MAX_DISCORD_LENGTH]
+                if brain_response_chunk:
+                    await message.channel.send(brain_response_chunk)
+        else:
+            await message.channel.send(brain_response)
