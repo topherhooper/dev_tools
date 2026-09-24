@@ -1,0 +1,16 @@
+# Runtime state HA writes into /config — never commit these.
+secrets.yaml
+.storage/
+.cloud/
+.HA_VERSION
+home-assistant.log*
+home-assistant_v2.db*
+*.db
+*.db-shm
+*.db-wal
+*.log
+tts/
+deps/
+backups/
+__pycache__/
+# UI-managed dashboards/helpers live in .storage; opt in explicitly if you want them tracked.

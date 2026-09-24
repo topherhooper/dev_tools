@@ -1,0 +1,38 @@
+name: home_assistant
+
+on:
+  push:
+    branches: [main, master]
+    paths: ["home_assistant/**", ".github/workflows/home_assistant.yml"]
+  pull_request:
+    paths: ["home_assistant/**", ".github/workflows/home_assistant.yml"]
+
+defaults:
+  run:
+    working-directory: home_assistant
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e '.[dev]'
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: yamllint -s .
+      - run: pytest -q
+
+  ha-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use example secrets
+        run: cp config/secrets.example.yaml config/secrets.yaml
+      - name: Home Assistant check_config
+        run: >-
+          docker run --rm -v "$PWD/config:/config"
+          ghcr.io/home-assistant/home-assistant:stable
+          python -m homeassistant --script check_config --config /config

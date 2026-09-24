@@ -1,0 +1,29 @@
+# Example package: a simple home/away/night mode with a helper and one automation.
+# Delete or replace once you have real packages.
+
+input_select:
+  house_mode:
+    name: House mode
+    options:
+      - home
+      - away
+      - night
+    icon: mdi:home-switch
+
+automation:
+  - id: house_mode_night_at_midnight
+    alias: "House mode: switch to night at midnight"
+    triggers:
+      - trigger: time
+        at: "00:00:00"
+    conditions:
+      - condition: state
+        entity_id: input_select.house_mode
+        state: home
+    actions:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.house_mode
+        data:
+          option: night
+    mode: single

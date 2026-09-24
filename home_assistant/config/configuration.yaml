@@ -1,0 +1,24 @@
+# Home Assistant configuration — managed in git.
+# Edit here, open a PR, let CI validate, then deploy (see README).
+
+# Loads frontend, cloud, mobile_app, energy, etc.
+default_config:
+
+homeassistant:
+  name: !secret home_name
+  latitude: !secret home_latitude
+  longitude: !secret home_longitude
+  elevation: !secret home_elevation
+  unit_system: metric
+  time_zone: !secret time_zone
+  # Each file in packages/ can bundle related automations, scripts,
+  # sensors, helpers, etc. for one feature or area of the house.
+  packages: !include_dir_named packages
+
+logger:
+  default: warning
+
+# UI-editable files. The HA editor writes to these, so keep them as plain lists.
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
