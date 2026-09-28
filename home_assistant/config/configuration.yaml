@@ -1,22 +1,25 @@
 # Home Assistant configuration — managed in git.
 # Edit here, open a PR, let CI validate, then deploy (see README).
+#
+# Core settings (location, time zone, units, currency) are deliberately NOT
+# declared here. HA owns them in .storage, set during onboarding and editable
+# under Settings > System > General. A `homeassistant:` block would override
+# that copy, giving two sources of truth for the same values.
 
 # Loads frontend, cloud, mobile_app, energy, etc.
 default_config:
 
-homeassistant:
-  name: !secret home_name
-  latitude: !secret home_latitude
-  longitude: !secret home_longitude
-  elevation: !secret home_elevation
-  unit_system: metric
-  time_zone: !secret time_zone
-  # Each file in packages/ can bundle related automations, scripts,
-  # sensors, helpers, etc. for one feature or area of the house.
-  packages: !include_dir_named packages
+# Themes dropped into config/themes/ on the host.
+frontend:
+  themes: !include_dir_merge_named themes
 
 logger:
   default: warning
+
+# Each file in packages/ can bundle related automations, scripts,
+# sensors, helpers, etc. for one feature or area of the house.
+homeassistant:
+  packages: !include_dir_named packages
 
 # UI-editable files. The HA editor writes to these, so keep them as plain lists.
 automation: !include automations.yaml
