@@ -151,30 +151,30 @@
     at: '10:00:00'
   conditions:
   - condition: template
-    value_template: '{{ states(''sensor.roborock_q5_filter_time_left'') | float <
-      0 or states(''sensor.roborock_q5_side_brush_time_left'') | float < 0 or states(''sensor.roborock_q5_sensor_time_left'')
-      | float < 0 or states(''sensor.roborock_q5_main_brush_time_left'') | float <
+    value_template: '{{ states(''sensor.roborock_q5_filter_time_left'') | float(0) <
+      0 or states(''sensor.roborock_q5_side_brush_time_left'') | float(0) < 0 or states(''sensor.roborock_q5_sensor_time_left'')
+      | float(0) < 0 or states(''sensor.roborock_q5_main_brush_time_left'') | float(999) <
       10 }}'
   actions:
   - data:
       title: "\U0001F9F9 Roborock Maintenance"
       message: 'Parts needing attention:
 
-        {% if states(''sensor.roborock_q5_filter_time_left'') | float < 0 %}- Filter:
-        {{ states(''sensor.roborock_q5_filter_time_left'') | float | abs | round(0)
+        {% if states(''sensor.roborock_q5_filter_time_left'') | float(0) < 0 %}- Filter:
+        {{ states(''sensor.roborock_q5_filter_time_left'') | float(0) | abs | round(0)
         }}h overdue
 
-        {% endif %}{% if states(''sensor.roborock_q5_side_brush_time_left'') | float
+        {% endif %}{% if states(''sensor.roborock_q5_side_brush_time_left'') | float(0)
         < 0 %}- Side brush: {{ states(''sensor.roborock_q5_side_brush_time_left'')
-        | float | abs | round(0) }}h overdue
+        | float(0) | abs | round(0) }}h overdue
 
-        {% endif %}{% if states(''sensor.roborock_q5_sensor_time_left'') | float <
-        0 %}- Sensors: {{ states(''sensor.roborock_q5_sensor_time_left'') | float
+        {% endif %}{% if states(''sensor.roborock_q5_sensor_time_left'') | float(0) <
+        0 %}- Sensors: {{ states(''sensor.roborock_q5_sensor_time_left'') | float(0)
         | abs | round(0) }}h overdue
 
-        {% endif %}{% if states(''sensor.roborock_q5_main_brush_time_left'') | float
+        {% endif %}{% if states(''sensor.roborock_q5_main_brush_time_left'') | float(999)
         < 10 %}- Main brush: {{ states(''sensor.roborock_q5_main_brush_time_left'')
-        | float | round(0) }}h remaining
+        | float(0) | round(0) }}h remaining
 
         {% endif %}'
     action: notify.mobile_app_pixel_8
