@@ -10,6 +10,9 @@ Run build/test commands from inside the project folder, not the repo root.
   even when asked to "just push it" — say the PR is the path instead. `main` also has a
   ruleset requiring a pull request, which the owner can bypass, but don't use the bypass.
 - `main`'s ruleset also requires **signed commits**.
+- PRs merge as a **squash commit whose message is the PR title and body** (squash is the
+  only method enabled). So the PR description is the permanent commit message — write it
+  as one, and keep review chatter in comments rather than the body.
 - Commits are not signed by default on the living-room box — there is no signing key in
   `~/.gitconfig`, so a commit made here will trip the signature rule until one is set up.
 - The `gh` credential helper reads the keyring. If a `git push` or `gh` call stalls for
