@@ -19,6 +19,11 @@ def find_project_root(start: Path | None = None) -> Path:
 PROJECT_ROOT = find_project_root()
 CONFIG_DIR = PROJECT_ROOT / "config"
 
+# The HA config dir is owned by root, but add-on SSH logs in as an unprivileged user
+# (`hassio` on HA OS), so the remote rsync has to be elevated to write into it.
+# Set HA_RSYNC_PATH="" for a host where the SSH user already owns the config dir.
+DEFAULT_RSYNC_PATH = "sudo rsync"
+
 
 def load_dotenv(path: Path) -> None:
     """Minimal .env loader: KEY=VALUE lines; real env vars take precedence."""
@@ -38,6 +43,7 @@ class Settings:
     token: str
     ssh: str
     remote_config_dir: str
+    rsync_path: str
 
     @classmethod
     def from_env(cls, dotenv: Path | None = PROJECT_ROOT / ".env") -> Settings:
@@ -48,4 +54,5 @@ class Settings:
             token=os.environ.get("HA_TOKEN", ""),
             ssh=os.environ.get("HA_SSH", ""),
             remote_config_dir=os.environ.get("HA_CONFIG_DIR", "/config"),
+            rsync_path=os.environ.get("HA_RSYNC_PATH", DEFAULT_RSYNC_PATH),
         )

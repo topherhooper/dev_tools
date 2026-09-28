@@ -2,6 +2,10 @@ extends: default
 
 ignore: |
   .venv/
+  # UI-managed: Home Assistant rewrites these, so their formatting is not ours to police.
+  config/automations.yaml
+  config/scripts.yaml
+  config/scenes.yaml
 
 rules:
   line-length:

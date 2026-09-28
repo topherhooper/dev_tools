@@ -16,6 +16,22 @@ def test_push_excludes_secrets_by_default_and_never_deletes():
     assert ".storage/" in excluded
 
 
+def test_push_elevates_remote_rsync_by_default():
+    cmd = push_command("hassio@ha", "/config", local_dir=LOCAL)
+    assert cmd[cmd.index("--rsync-path") + 1] == "sudo rsync"
+
+
+def test_push_rsync_path_can_be_disabled():
+    cmd = push_command("root@ha", "/config", local_dir=LOCAL, rsync_path="")
+    assert "--rsync-path" not in cmd
+
+
+def test_pull_does_not_elevate():
+    # Pulling only reads world-readable files, so it needs no elevation.
+    cmd = pull_command("hassio@ha", "/config", local_dir=LOCAL)
+    assert "--rsync-path" not in cmd
+
+
 def test_push_include_secrets_and_dry_run():
     cmd = push_command("root@ha", "/config", local_dir=LOCAL, include_secrets=True, dry_run=True)
     excluded = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--exclude"]

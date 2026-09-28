@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from hactl.client import HAError
-from hactl.settings import CONFIG_DIR
+from hactl.settings import CONFIG_DIR, DEFAULT_RSYNC_PATH
 
 # Never push these: they are either local-only or HA runtime state.
 PUSH_EXCLUDES = (
@@ -34,9 +34,13 @@ def push_command(
     local_dir: Path = CONFIG_DIR,
     include_secrets: bool = False,
     dry_run: bool = False,
+    rsync_path: str = DEFAULT_RSYNC_PATH,
 ) -> list[str]:
     # No --delete: removing a file in git should not silently wipe it on the host.
     cmd = ["rsync", "-rlptzv", "--checksum"]
+    # Elevate only the far-side rsync; the SSH login itself stays unprivileged.
+    if rsync_path:
+        cmd += ["--rsync-path", rsync_path]
     if dry_run:
         cmd.append("--dry-run")
     for pattern in PUSH_EXCLUDES:

@@ -91,6 +91,7 @@ def cmd_deploy(args: argparse.Namespace, settings: Settings) -> int:
             settings.remote_config_dir,
             include_secrets=args.include_secrets,
             dry_run=args.dry_run,
+            rsync_path=settings.rsync_path,
         )
     )
     if args.dry_run or args.no_reload:
