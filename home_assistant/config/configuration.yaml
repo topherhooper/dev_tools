@@ -13,6 +13,12 @@ default_config:
 frontend:
   themes: !include_dir_merge_named themes
 
+# Brute-force protection for the login page. Bans are recorded in
+# /config/ip_bans.yaml on the host; delete a line there to unban an address.
+http:
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
 logger:
   default: warning
 
