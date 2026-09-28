@@ -6,5 +6,9 @@
   Give every automation a stable `id`.
 - Every `!secret` you reference must also be added to `config/secrets.example.yaml` with a placeholder,
   or the CI config check fails. Never commit `secrets.yaml`, `.env`, or anything from `.storage/`.
-- Before pushing, run `make lint test` from this folder. CI also runs HA's `check_config` in Docker.
+- Before pushing, run `make lint test` from this folder, plus `make check-config` for HA's own
+  validation. That target runs the official HA image with podman by default
+  (`CONTAINER=docker` to override); CI runs the same check with docker.
+- `make install` builds `.venv/` here; run the CLI as `.venv/bin/hactl`. `.env` and
+  `config/secrets.yaml` are local, git-ignored copies of the `.example` files.
 - Don't run `hactl deploy`, `reload`, or `call` (they change the live house) unless the user asks.
