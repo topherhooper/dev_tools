@@ -13,7 +13,9 @@ Run build/test commands from inside the project folder, not the repo root.
 - PRs merge as a **squash commit whose message is the PR title and body** (squash is the
   only method enabled). So the PR description is the permanent commit message — write it
   as one, and keep review chatter in comments rather than the body.
-- Commits are not signed by default on the living-room box — there is no signing key in
-  `~/.gitconfig`, so a commit made here will trip the signature rule until one is set up.
+- Signing is set up on the living-room box: `gpg.format=ssh` with `commit.gpgsign=true`
+  and `user.signingkey=~/.ssh/id_ed25519.pub`, registered on GitHub as the signing key
+  `hactl-livingroom`. Commits made here satisfy the signature rule as-is — don't disable
+  signing to work around a failure, fix the key instead.
 - The `gh` credential helper reads the keyring. If a `git push` or `gh` call stalls for
   minutes, the KWallet keyring is locked — that's the cause, not the network.
