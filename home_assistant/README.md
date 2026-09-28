@@ -31,7 +31,8 @@ Create the token in HA under **Profile → Security → Long-lived access tokens
 ## Workflow
 
 1. Edit YAML under `config/` (prefer new files in `config/packages/`).
-2. `make lint test`, plus `make check-config` if Docker is available. The HA config
+2. `make lint test`, plus `make check-config` if a container engine is available
+   (podman by default; `make check-config CONTAINER=docker` for docker). The HA config
    check also runs in CI on every PR that touches `home_assistant/`.
 3. Deploy with `.venv/bin/hactl deploy --dry-run`, then `hactl deploy`. This rsyncs
    `config/` to the host, has HA validate it, and reloads (`--restart` for a full restart).

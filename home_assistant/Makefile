@@ -1,6 +1,8 @@
 VENV := .venv
 BIN := $(VENV)/bin
 HA_IMAGE ?= ghcr.io/home-assistant/home-assistant:stable
+# Container engine for check-config. Override with `make check-config CONTAINER=docker`.
+CONTAINER ?= podman
 
 .PHONY: install test lint format check-config deploy pull
 
@@ -24,9 +26,10 @@ format: install
 
 # Full HA validation of config/ using the official image (same as CI).
 # Uses secrets.example.yaml unless you have a local secrets.yaml.
+# The :z mount flag is needed for rootless podman on SELinux hosts; docker accepts it too.
 check-config:
 	@test -f config/secrets.yaml || cp config/secrets.example.yaml config/secrets.yaml
-	docker run --rm -v "$(CURDIR)/config:/config" $(HA_IMAGE) \
+	$(CONTAINER) run --rm -v "$(CURDIR)/config:/config:z" $(HA_IMAGE) \
 		python -m homeassistant --script check_config --config /config
 
 deploy: install
