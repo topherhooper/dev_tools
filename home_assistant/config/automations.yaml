@@ -8,7 +8,7 @@
     above: 35
     for:
       minutes: 5
-  - alias: Main Floor PM2.5 above 35 µg/m³
+  - alias: Kitchen PM2.5 above 35 µg/m³
     platform: numeric_state
     entity_id: sensor.alpstuga_air_quality_monitor_pm2_5_2
     above: 35
@@ -30,7 +30,7 @@
       title: ⚠️ Air Quality Alert
       message: PM2.5 is {{ trigger.to_state.state }} µg/m³ in {% if trigger.entity_id
         == 'sensor.alpstuga_air_quality_monitor_pm2_5' %}Master Bedroom{% elif trigger.entity_id
-        == 'sensor.alpstuga_air_quality_monitor_pm2_5_2' %}Main Floor{% else %}Basement{%
+        == 'sensor.alpstuga_air_quality_monitor_pm2_5_2' %}Kitchen{% else %}Basement{%
         endif %}
     action: notify.mobile_app_pixel_8
   mode: single
@@ -44,7 +44,7 @@
     above: 1000
     for:
       minutes: 10
-  - alias: Main Floor CO2 above 1000 ppm
+  - alias: Kitchen CO2 above 1000 ppm
     platform: numeric_state
     entity_id: sensor.alpstuga_air_quality_monitor_carbon_dioxide_2
     above: 1000
@@ -67,7 +67,7 @@
       message: CO2 is {{ trigger.to_state.state }} ppm in {% if trigger.entity_id
         == 'sensor.alpstuga_air_quality_monitor_carbon_dioxide' %}Master Bedroom{%
         elif trigger.entity_id == 'sensor.alpstuga_air_quality_monitor_carbon_dioxide_2'
-        %}Main Floor{% else %}Basement{% endif %}
+        %}Kitchen{% else %}Basement{% endif %}
     action: notify.mobile_app_pixel_8
   mode: single
 - id: '1773714275445'
@@ -81,7 +81,7 @@
     below: 30
     for:
       minutes: 15
-  - alias: Main Floor humidity below 30%
+  - alias: Kitchen humidity below 30%
     platform: numeric_state
     entity_id: sensor.alpstuga_air_quality_monitor_humidity_2
     below: 30
@@ -103,8 +103,7 @@
       title: ⚠️ Air Quality Alert
       message: Humidity is {{ trigger.to_state.state }}% in {% if trigger.entity_id
         == 'sensor.alpstuga_air_quality_monitor_humidity' %}Master Bedroom{% elif
-        trigger.entity_id == 'sensor.alpstuga_air_quality_monitor_humidity_2' %}Main
-        Floor{% else %}Basement{% endif %} (too dry)
+        trigger.entity_id == 'sensor.alpstuga_air_quality_monitor_humidity_2' %}Kitchen{% else %}Basement{% endif %} (too dry)
     action: notify.mobile_app_pixel_8
   mode: single
 - id: '1773714282361'
@@ -117,7 +116,7 @@
     above: 60
     for:
       minutes: 15
-  - alias: Main Floor humidity above 60%
+  - alias: Kitchen humidity above 60%
     platform: numeric_state
     entity_id: sensor.alpstuga_air_quality_monitor_humidity_2
     above: 60
@@ -139,8 +138,7 @@
       title: ⚠️ Air Quality Alert
       message: Humidity is {{ trigger.to_state.state }}% in {% if trigger.entity_id
         == 'sensor.alpstuga_air_quality_monitor_humidity' %}Master Bedroom{% elif
-        trigger.entity_id == 'sensor.alpstuga_air_quality_monitor_humidity_2' %}Main
-        Floor{% else %}Basement{% endif %} (too humid)
+        trigger.entity_id == 'sensor.alpstuga_air_quality_monitor_humidity_2' %}Kitchen{% else %}Basement{% endif %} (too humid)
     action: notify.mobile_app_pixel_8
   mode: single
 - id: '1773714296420'
