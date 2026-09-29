@@ -1,0 +1,35 @@
+# House alerts — one sensor that answers "is anything wrong?"
+#
+# Every threshold lives in custom_templates/house_alerts.jinja, imported below.
+# Both the count and the list come from that one macro, so they cannot disagree.
+#
+# sensor.house_alerts
+#   state          number of active alerts (0 when the house is fine)
+#   items          list of {id, sev, icon, title, detail}, newest rules last
+#
+# The dashboard renders `items` instead of the 20 hand-written alert cards it
+# replaces. A follow-up change retires the six notification automations in
+# automations.yaml in favour of one that reads this sensor — they are still in
+# charge until then, so nothing here notifies anybody yet.
+
+template:
+  - sensor:
+      - name: House Alerts
+        unique_id: house_alerts
+        icon: mdi:alert-circle-outline
+        state: >-
+          {% from 'house_alerts.jinja' import house_alerts %}
+          {{ house_alerts() | from_json | count }}
+        state_class: measurement
+        attributes:
+          items: >-
+            {% from 'house_alerts.jinja' import house_alerts %}
+            {{ house_alerts() | from_json }}
+          # Split out so a card can show "2 need action, 3 worth knowing"
+          # without re-walking the list in Jinja on every render.
+          alert_count: >-
+            {% from 'house_alerts.jinja' import house_alerts %}
+            {{ house_alerts() | from_json | selectattr('sev', 'eq', 'alert') | list | count }}
+          warn_count: >-
+            {% from 'house_alerts.jinja' import house_alerts %}
+            {{ house_alerts() | from_json | selectattr('sev', 'eq', 'warn') | list | count }}
