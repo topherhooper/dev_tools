@@ -33,3 +33,56 @@ template:
           warn_count: >-
             {% from 'house_alerts.jinja' import house_alerts %}
             {{ house_alerts() | from_json | selectattr('sev', 'eq', 'warn') | list | count }}
+
+# One automation in place of six. The old set had one automation per condition,
+# each rate-limited by comparing now() against its own last_triggered — which
+# suppressed a *second, different* alert that fired inside the same window.
+# Keying on alert id instead means every distinct alert gets through exactly once,
+# and a value drifting inside an already-active alert (16h overdue becoming 17h)
+# never re-notifies.
+automation:
+  - id: house_alerts_notify
+    alias: House Alerts - notify when a new alert appears
+    description: >-
+      Notifies for alert ids that were not in sensor.house_alerts a moment ago,
+      after confirming they are still true five minutes later.
+    mode: queued
+    max: 10
+    triggers:
+      - trigger: state
+        entity_id: sensor.house_alerts
+    variables:
+      previous: >-
+        {{ (trigger.from_state.attributes.get('items', []) if trigger.from_state else [])
+           | map(attribute='id') | list }}
+      fresh: >-
+        {{ (trigger.to_state.attributes.get('items', []) if trigger.to_state else [])
+           | rejectattr('id', 'in', previous) | list }}
+      fresh_ids: "{{ fresh | map(attribute='id') | list }}"
+    conditions:
+      # trigger.from_state is None on the first state after a restart. Without this
+      # guard every already-active alert would notify again on every restart.
+      - condition: template
+        value_template: >-
+          {{ trigger.from_state is not none
+             and trigger.from_state.state not in ['unknown', 'unavailable']
+             and fresh | count > 0 }}
+    actions:
+      # The old air-quality automations debounced with `for: 5-15 minutes` on their
+      # triggers so a brief CO2 spike on walking into a room stayed quiet. This is
+      # that idea in one place: wait, then only report what is still true.
+      - delay: "00:05:00"
+      - variables:
+          still: >-
+            {{ (state_attr('sensor.house_alerts', 'items') or [])
+               | selectattr('id', 'in', fresh_ids) | list }}
+      - condition: template
+        value_template: "{{ still | count > 0 }}"
+      - action: notify.mobile_app_pixel_8
+        data:
+          title: >-
+            {% if still | count == 1 %}{{ still[0].title }}{% else %}{{ still | count }} new alerts{% endif %}
+          message: >-
+            {% set ns = namespace(lines=[]) %}
+            {%- for a in still %}{% set ns.lines = ns.lines + [a.title ~ ' — ' ~ a.detail] %}{% endfor -%}
+            {{ ns.lines | join('\n') }}
