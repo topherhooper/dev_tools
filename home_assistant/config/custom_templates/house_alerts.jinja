@@ -1,0 +1,123 @@
+{#-
+  The one place every "something needs attention" threshold is written down.
+
+  Imported by packages/house_alerts.yaml, which turns it into sensor.house_alerts.
+  The dashboard renders that sensor, so a threshold changed here changes both the
+  alert and the card — they cannot drift apart the way the old hand-written card
+  visibility blocks drifted from the automations.
+
+  Returns a JSON array of {id, sev, icon, title, detail}. `id` is stable per alert
+  so consumers can tell a new alert from one that is merely still true. `sev` is
+  alert (act now) / warn (act soon) / info (worth knowing).
+
+  Every reading is defaulted so a MISSING value cannot invent an alert:
+  `float(-1)` for "too high" tests and `float(99999)` for "too low" tests.
+  An offline sensor is reported as its own alert instead, once, by the monitor loop.
+
+  Editing note: HA caches this file. After changing it, call
+  homeassistant.reload_custom_templates (or restart) or the old copy keeps running.
+-#}
+
+{%- macro house_alerts() -%}
+  {#- Air quality monitors: display name -> entity suffix. -#}
+  {%- set monitors = [
+        ('Master Bedroom', ''),
+        ('Kitchen', '_2'),
+        ('Basement', '_3')] -%}
+
+  {#- Thresholds. -#}
+  {%- set PM25_MAX = 35 -%}
+  {%- set CO2_MAX = 1000 -%}
+  {%- set RH_MIN = 30 -%}
+  {%- set RH_MAX = 60 -%}
+  {%- set TONER_MIN = 10 -%}
+  {%- set BACKUP_MAX_AGE_H = 48 -%}
+
+  {%- set ns = namespace(items=[]) -%}
+
+  {%- for room, sfx in monitors -%}
+    {%- set pm = states('sensor.alpstuga_air_quality_monitor_pm2_5' ~ sfx) | float(-1) -%}
+    {%- set co2 = states('sensor.alpstuga_air_quality_monitor_carbon_dioxide' ~ sfx) | float(-1) -%}
+    {%- set rh_hi = states('sensor.alpstuga_air_quality_monitor_humidity' ~ sfx) | float(-1) -%}
+    {%- set rh_lo = states('sensor.alpstuga_air_quality_monitor_humidity' ~ sfx) | float(99999) -%}
+
+    {%- if not has_value('sensor.alpstuga_air_quality_monitor_pm2_5' ~ sfx) -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'air_offline' ~ sfx, 'sev': 'warn', 'icon': 'mdi:lan-disconnect',
+            'title': 'Monitor offline — ' ~ room,
+            'detail': 'no readings'}] -%}
+    {%- endif -%}
+
+    {%- if pm > PM25_MAX -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'pm25' ~ sfx, 'sev': 'warn', 'icon': 'mdi:air-filter',
+            'title': 'PM2.5 high — ' ~ room,
+            'detail': (pm | round(0) | int) ~ ' µg/m³'}] -%}
+    {%- endif -%}
+
+    {%- if co2 > CO2_MAX -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'co2' ~ sfx, 'sev': 'warn', 'icon': 'mdi:molecule-co2',
+            'title': 'CO2 high — ' ~ room,
+            'detail': (co2 | round(0) | int) ~ ' ppm'}] -%}
+    {%- endif -%}
+
+    {%- if rh_lo < RH_MIN -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'rh_low' ~ sfx, 'sev': 'info', 'icon': 'mdi:water-percent',
+            'title': 'Humidity low — ' ~ room,
+            'detail': (rh_lo | round(0) | int) ~ '% (too dry)'}] -%}
+    {%- endif -%}
+
+    {%- if rh_hi > RH_MAX -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'rh_high' ~ sfx, 'sev': 'info', 'icon': 'mdi:water-percent',
+            'title': 'Humidity high — ' ~ room,
+            'detail': (rh_hi | round(0) | int) ~ '% (too humid)'}] -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {#- Roborock consumables: negative hours remaining means overdue. -#}
+  {%- for key, label in [
+        ('main_brush', 'Main brush'), ('side_brush', 'Side brush'),
+        ('filter', 'Filter'), ('sensor', 'Sensors')] -%}
+    {%- set left = states('sensor.roborock_q5_' ~ key ~ '_time_left') | float(99999) -%}
+    {%- if left < 0 -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'vac_' ~ key, 'sev': 'info', 'icon': 'mdi:robot-vacuum',
+            'title': label ~ ' overdue',
+            'detail': 'Roborock Q5 · ' ~ (left | abs | round(0) | int) ~ 'h past due'}] -%}
+    {%- endif -%}
+  {%- endfor -%}
+
+  {%- if states('sensor.roborock_q5_vacuum_error') not in ['none', 'unknown', 'unavailable'] -%}
+    {%- set ns.items = ns.items + [{
+          'id': 'vac_error', 'sev': 'alert', 'icon': 'mdi:robot-vacuum-alert',
+          'title': 'Vacuum error',
+          'detail': states('sensor.roborock_q5_vacuum_error')}] -%}
+  {%- endif -%}
+
+  {%- set toner = states('sensor.brother_mfc_l2750dw_series_bk') | float(-1) -%}
+  {%- if toner >= 0 and toner < TONER_MIN -%}
+    {%- set ns.items = ns.items + [{
+          'id': 'toner_bk', 'sev': 'info', 'icon': 'mdi:printer-alert',
+          'title': 'Printer toner low',
+          'detail': 'Brother MFC-L2750DW · black at ' ~ (toner | round(0) | int) ~ '%'}] -%}
+  {%- endif -%}
+
+  {#- Backups: never run at all is worse than merely stale, so they read differently. -#}
+  {%- set last_backup = states('sensor.backup_last_successful_automatic_backup') -%}
+  {%- if last_backup in ['unknown', 'unavailable', 'none'] -%}
+    {%- set ns.items = ns.items + [{
+          'id': 'backup_never', 'sev': 'alert', 'icon': 'mdi:backup-restore',
+          'title': 'No backup yet',
+          'detail': 'never run · nothing to restore from'}] -%}
+  {%- elif (as_timestamp(now()) - as_timestamp(last_backup, 0)) / 3600 > BACKUP_MAX_AGE_H -%}
+    {%- set ns.items = ns.items + [{
+          'id': 'backup_stale', 'sev': 'warn', 'icon': 'mdi:backup-restore',
+          'title': 'Backup is stale',
+          'detail': 'last good backup ' ~ (((as_timestamp(now()) - as_timestamp(last_backup, 0)) / 3600) | round(0) | int) ~ 'h ago'}] -%}
+  {%- endif -%}
+
+  {{- ns.items | to_json -}}
+{%- endmacro -%}

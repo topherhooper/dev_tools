@@ -11,6 +11,7 @@ home_assistant/
 │   ├── scripts.yaml      # UI-managed
 │   ├── scenes.yaml       # UI-managed
 │   ├── packages/         # hand-written features, one file per area/feature
+│   ├── custom_templates/ # Jinja macros shared by packages (see Alerts)
 │   └── secrets.example.yaml
 ├── src/hactl/            # CLI + API client
 └── tests/
