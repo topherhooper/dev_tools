@@ -1,0 +1,13 @@
+# Runs 45 minutes after Home Assistant's 04:15 backup window.
+# Not installed by this repo — see the Backups section of home_assistant/README.md.
+[Unit]
+Description=Daily pull of Home Assistant backups
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+# Catch up after the box has been off rather than skipping the day entirely.
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target

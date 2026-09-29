@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from hactl.settings import find_project_root, load_dotenv
-from hactl.sync import pull_command, push_command
+from hactl.sync import backup_pull_command, pull_command, push_command
 
 LOCAL = Path("/repo/config")
 
@@ -45,6 +45,28 @@ def test_pull_fetches_ui_managed_files():
     assert "root@ha:/config/automations.yaml" in cmd
     assert "root@ha:/config/scripts.yaml" in cmd
     assert cmd[-1] == "/repo/config/"
+
+
+def test_backup_pull_never_deletes_and_skips_existing():
+    # HA prunes the host to its retention limit; the copy here is meant to outlive that.
+    cmd = backup_pull_command("hassio@ha", "/backup/", Path("/home/me/backups/ha"))
+    assert "--delete" not in cmd
+    assert "--ignore-existing" in cmd
+    assert cmd[-2:] == ["hassio@ha:/backup/", "/home/me/backups/ha/"]
+
+
+def test_backup_pull_elevates_remote_rsync_and_threads_dry_run():
+    # /backup is root-owned, so the far-side rsync needs the same elevation deploy uses.
+    cmd = backup_pull_command("hassio@ha", "/backup", Path("/b"), dry_run=True)
+    assert cmd[cmd.index("--rsync-path") + 1] == "sudo rsync"
+    assert "--dry-run" in cmd
+
+
+def test_backup_pull_skips_compression_and_checksums():
+    # Backup tars are immutable and already compressed; -z/--checksum would just burn CPU.
+    cmd = backup_pull_command("hassio@ha", "/backup", Path("/b"))
+    assert "--checksum" not in cmd
+    assert cmd[1] == "-rlptv"
 
 
 def test_load_dotenv_does_not_override_env(tmp_path, monkeypatch):

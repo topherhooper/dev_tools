@@ -24,6 +24,10 @@ CONFIG_DIR = PROJECT_ROOT / "config"
 # Set HA_RSYNC_PATH="" for a host where the SSH user already owns the config dir.
 DEFAULT_RSYNC_PATH = "sudo rsync"
 
+# Where HA OS writes its backups, and where this machine keeps the copies it pulls.
+DEFAULT_BACKUP_DIR = "/backup"
+DEFAULT_LOCAL_BACKUP_DIR = Path.home() / "backups" / "home-assistant"
+
 
 def load_dotenv(path: Path) -> None:
     """Minimal .env loader: KEY=VALUE lines; real env vars take precedence."""
@@ -44,15 +48,22 @@ class Settings:
     ssh: str
     remote_config_dir: str
     rsync_path: str
+    remote_backup_dir: str
+    local_backup_dir: Path
 
     @classmethod
     def from_env(cls, dotenv: Path | None = PROJECT_ROOT / ".env") -> Settings:
         if dotenv is not None:
             load_dotenv(dotenv)
+        local_backups = os.environ.get("HA_BACKUP_LOCAL", "")
         return cls(
             url=os.environ.get("HA_URL", ""),
             token=os.environ.get("HA_TOKEN", ""),
             ssh=os.environ.get("HA_SSH", ""),
             remote_config_dir=os.environ.get("HA_CONFIG_DIR", "/config"),
             rsync_path=os.environ.get("HA_RSYNC_PATH", DEFAULT_RSYNC_PATH),
+            remote_backup_dir=os.environ.get("HA_BACKUP_DIR", DEFAULT_BACKUP_DIR),
+            local_backup_dir=(
+                Path(local_backups).expanduser() if local_backups else DEFAULT_LOCAL_BACKUP_DIR
+            ),
         )

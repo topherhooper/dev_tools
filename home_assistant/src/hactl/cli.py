@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 import httpx
 
@@ -108,6 +109,41 @@ def cmd_pull(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_backups_pull(args: argparse.Namespace, settings: Settings) -> int:
+    local = settings.local_backup_dir
+    local.mkdir(parents=True, exist_ok=True)
+    sync.run(
+        sync.backup_pull_command(
+            _require_ssh(settings),
+            settings.remote_backup_dir,
+            local,
+            dry_run=args.dry_run,
+            rsync_path=settings.rsync_path,
+        )
+    )
+    if args.dry_run:
+        return 0
+
+    backups = sorted(local.glob("*.tar"), key=lambda p: p.stat().st_mtime, reverse=True)
+    total = sum(p.stat().st_size for p in backups)
+    print(f"\n{len(backups)} backup(s) in {local}, {total / 1e9:.2f} GB total")
+    if not backups:
+        print("error: no backups here at all — HA has never written one", file=sys.stderr)
+        return 1
+
+    newest = backups[0]
+    age = (datetime.now(UTC) - datetime.fromtimestamp(newest.stat().st_mtime, UTC)).total_seconds()
+    print(f"newest: {newest.name} ({newest.stat().st_size / 1e9:.2f} GB, {age / 3600:.1f}h old)")
+    if age > args.stale_after * 3600:
+        print(
+            f"error: newest backup is {age / 3600:.1f}h old, over the {args.stale_after}h limit —"
+            " check HA's backup schedule",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hactl", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -145,6 +181,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("pull", help="fetch UI-edited automations/scripts/scenes into config/")
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(func=cmd_pull)
+
+    p = sub.add_parser("backups", help="work with HA's backup archives (read-only)")
+    backups = p.add_subparsers(dest="backups_command", required=True)
+    p = backups.add_parser("pull", help="copy HA's backups off the host and keep them here")
+    p.add_argument("--dry-run", action="store_true", help="show what would be copied")
+    p.add_argument(
+        "--stale-after",
+        type=float,
+        default=48,
+        metavar="HOURS",
+        help="exit non-zero if the newest backup is older than this (default: 48)",
+    )
+    p.set_defaults(func=cmd_backups_pull)
 
     return parser
 

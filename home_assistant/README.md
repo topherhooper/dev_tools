@@ -52,6 +52,44 @@ Deploy never deletes files on the host and never copies `secrets.yaml`
 | `hactl reload [--restart]` | Check, then reload all YAML (or restart) |
 | `hactl deploy [--dry-run] [--no-reload] [--restart] [--include-secrets]` | Push `config/` to the host |
 | `hactl pull [--dry-run]` | Fetch UI-edited automations, scripts and scenes |
+| `hactl backups pull [--dry-run] [--stale-after HOURS]` | Copy HA's backups off the host and keep them here |
+
+## Backups
+
+Only `config/` is in git. `.storage` (entities, areas, dashboards, the Matter fabric),
+`secrets.yaml`, HACS and `custom_components/` are not, and none of it is reconstructable
+from this repo — so the backups are the real safety net, not the git history.
+
+HA OS runs off eMMC/SD, and its only backup agent (`hassio.local`) writes to that same
+card. Two layers, so a copy survives the card:
+
+1. **HA creates one nightly** at 04:15 to `hassio.local`, database and all add-ons
+   included, keeping 3 copies. Configured under Settings → System → Backups.
+2. **This machine pulls them off** with `hactl backups pull`, into
+   `~/backups/home-assistant` (override with `HA_BACKUP_LOCAL`).
+
+The pull never deletes. HA prunes the host to 3 copies; the local side keeps every backup
+it has ever seen, which is the whole point of the second layer. It also exits non-zero
+when the newest backup is older than `--stale-after` (default 48h) — a schedule that
+quietly stops is the failure that actually happens, and this makes it loud.
+
+To run it unattended, install the units from `systemd/`:
+
+```sh
+ln -s "$PWD"/systemd/hactl-backup-pull.{service,timer} ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now hactl-backup-pull.timer
+systemctl --user list-timers hactl-backup-pull.timer
+```
+
+They assume this repo is at `~/projects/dev_tools`. The timer needs
+`loginctl enable-linger "$USER"` to run while you are not logged in.
+
+Backups are unencrypted, so the tars contain `secrets.yaml` and long-lived tokens in the
+clear. Treat `~/backups/home-assistant` accordingly, especially before syncing it anywhere.
+
+Both copies are in the same house, which covers a dead SD card but not fire or theft. An
+off-site leg is still missing.
 
 ## Getting config onto the host
 

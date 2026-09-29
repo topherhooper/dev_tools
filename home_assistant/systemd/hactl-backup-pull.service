@@ -1,0 +1,16 @@
+# Copy Home Assistant's backups off the HA host onto this machine.
+# Not installed by this repo — see the Backups section of home_assistant/README.md
+# for the symlink-and-enable steps.
+[Unit]
+Description=Pull Home Assistant backups off the HA host
+Documentation=https://github.com/topherhooper/dev_tools/blob/main/home_assistant/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/dev_tools/home_assistant
+ExecStart=%h/projects/dev_tools/home_assistant/.venv/bin/hactl backups pull
+# The pull exits non-zero when the newest backup is stale, which is the point:
+# a schedule that silently stops producing backups becomes a failed unit here
+# rather than silence.

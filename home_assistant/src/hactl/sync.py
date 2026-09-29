@@ -68,6 +68,30 @@ def pull_command(
     return cmd
 
 
+def backup_pull_command(
+    ssh: str,
+    remote_dir: str,
+    local_dir: Path,
+    *,
+    dry_run: bool = False,
+    rsync_path: str = DEFAULT_RSYNC_PATH,
+) -> list[str]:
+    """Mirror HA's backup directory onto this machine.
+
+    Backups are immutable, already-compressed tars, so this skips -z and --checksum and
+    leans on --ignore-existing to make repeat runs nearly free. No --delete: HA prunes
+    the host to its retention limit, and the whole point of the copy is to outlive that.
+    """
+    cmd = ["rsync", "-rlptv", "--ignore-existing"]
+    # /backup and its contents are root-owned; the add-on SSH login is not.
+    if rsync_path:
+        cmd += ["--rsync-path", rsync_path]
+    if dry_run:
+        cmd.append("--dry-run")
+    cmd += [f"{ssh}:{remote_dir.rstrip('/')}/", f"{local_dir}/"]
+    return cmd
+
+
 def run(cmd: list[str]) -> None:
     if shutil.which(cmd[0]) is None:
         raise HAError(f"{cmd[0]} not found; install it locally (and on the HA host)")
