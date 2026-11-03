@@ -1,19 +1,23 @@
-# Robot vacuum schedule — the bedroom it can reach.
+# Robot vacuum schedule — the bedrooms it can reach.
 #
 # The Roborock Q5 lives downstairs and runs its own routines at night, when the
-# bedrooms are occupied, so the one bedroom on its map was never cleaned. This
+# bedrooms are occupied, so the two bedrooms on its map were never cleaned. This
 # sends it there on weekday mornings instead. Upstairs is beyond the robot; the
 # cleaner covers the whole house every two weeks.
 #
-# Segment ids come from the roborock.get_maps action (map 0):
-#   16 Study, 18 Bathroom, 19 Kitchen, 20 Guest bedroom, 21 Dining room.
+# Segment ids come from the roborock.get_maps action (map 0). Room names are
+# edited in the Roborock app; after a rename, reload the Roborock integration
+# or get_maps keeps returning the old ones.
+#   16 Green room, 17 Living room, 18 Bathroom, 19 Kitchen,
+#   20 Large bedroom, 21 Dining room, 22 Small Bedroom
 
 automation:
-  - id: robot_vacuum_guest_bedroom
-    alias: Robot vacuum - guest bedroom twice a week
+  - id: robot_vacuum_downstairs_bedrooms
+    alias: Robot vacuum - downstairs bedrooms twice a week
     description: >-
-      Segment-cleans the guest bedroom on Tuesday and Friday mornings, if the
-      robot is docked and reports no error.
+      Segment-cleans the Large and Small bedrooms on Tuesday and Friday
+      mornings, if the robot is docked, reports no error, and nobody is asleep
+      in Astrid's room (the Hatch sound machine is not playing).
     mode: single
     triggers:
       - trigger: time
@@ -27,6 +31,13 @@ automation:
       - condition: state
         entity_id: sensor.roborock_q5_vacuum_error
         state: none
+      # The Hatch plays white noise whenever Astrid is put down; a nap at 10:30
+      # is more likely than not on some days, and the robot is loud.
+      - condition: not
+        conditions:
+          - condition: state
+            entity_id: media_player.astrid_media_player
+            state: playing
     actions:
       - action: vacuum.send_command
         target:
@@ -34,5 +45,5 @@ automation:
         data:
           command: app_segment_clean
           params:
-            - segments: [20]
+            - segments: [20, 22]
               repeat: 1
