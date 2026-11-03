@@ -1,0 +1,115 @@
+# Robot vacuum schedule — the bedrooms it can reach.
+#
+# The Roborock Q5 lives downstairs and runs its own routines at night, when the
+# bedrooms are occupied, so the two bedrooms on its map were never cleaned. This
+# sends it there at 10:00 on Monday and Wednesday, the two weekdays both rooms
+# are reliably empty all day. Upstairs is beyond the robot; the cleaner covers
+# the whole house every other Friday, which is why Friday is left out.
+#
+# No sensor in the house can tell when the kids are unexpectedly home (sick day,
+# daycare closed), so that is a switch: "Skip next bedroom vacuum". A reminder
+# the evening before carries a button that flips it, or flip it by hand; it
+# resets itself just after the run time so it cannot be left on by mistake.
+#
+# Segment ids come from the roborock.get_maps action (map 0). Room names are
+# edited in the Roborock app; after a rename, reload the Roborock integration
+# or get_maps keeps returning the old ones.
+#   16 Green room, 17 Living room, 18 Bathroom, 19 Kitchen,
+#   20 Large bedroom, 21 Dining room, 22 Small Bedroom
+
+input_boolean:
+  skip_bedroom_vacuum:
+    name: Skip next bedroom vacuum
+    icon: mdi:robot-vacuum-off
+
+automation:
+  - id: robot_vacuum_downstairs_bedrooms
+    alias: Robot vacuum - downstairs bedrooms
+    description: >-
+      Segment-cleans the Large and Small bedrooms at 10:00 on Monday and
+      Wednesday, unless the robot is off its dock, reports an error, or
+      "Skip next bedroom vacuum" is on.
+    mode: single
+    triggers:
+      - trigger: time
+        at: "10:00:00"
+    conditions:
+      - condition: time
+        weekday: [mon, wed]
+      - condition: state
+        entity_id: vacuum.roborock_q5
+        state: docked
+      - condition: state
+        entity_id: sensor.roborock_q5_vacuum_error
+        state: none
+      - condition: state
+        entity_id: input_boolean.skip_bedroom_vacuum
+        state: "off"
+    actions:
+      - action: vacuum.send_command
+        target:
+          entity_id: vacuum.roborock_q5
+        data:
+          command: app_segment_clean
+          params:
+            - segments: [20, 22]
+              repeat: 1
+
+  # The evening before a run. The button turns the skip switch on from the
+  # notification, which is the whole reason the switch resets after the run
+  # rather than at midnight.
+  - id: bedroom_vacuum_reminder
+    alias: Bedroom vacuum - reminder the evening before
+    triggers:
+      - trigger: time
+        at: "20:00:00"
+    conditions:
+      - condition: time
+        weekday: [sun, tue]
+      - condition: state
+        entity_id: input_boolean.skip_bedroom_vacuum
+        state: "off"
+    actions:
+      - action: notify.mobile_app_pixel_8
+        data:
+          title: Bedroom vacuum tomorrow at 10:00
+          message: >-
+            Clear the floors in both downstairs bedrooms at drop-off. If anyone
+            will be home, skip it.
+          data:
+            tag: bedroom-vacuum-reminder
+            actions:
+              - action: SKIP_BEDROOM_VACUUM
+                title: Skip tomorrow
+
+  - id: bedroom_vacuum_skip_action
+    alias: Bedroom vacuum - skip button pressed
+    triggers:
+      - trigger: event
+        event_type: mobile_app_notification_action
+        event_data:
+          action: SKIP_BEDROOM_VACUUM
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.skip_bedroom_vacuum
+      - action: notify.mobile_app_pixel_8
+        data:
+          title: Bedroom vacuum skipped
+          message: Tomorrow's 10:00 run is off. The switch resets itself afterwards.
+          data:
+            tag: bedroom-vacuum-reminder
+
+  - id: bedroom_vacuum_skip_reset
+    alias: Bedroom vacuum - reset the skip switch after the run time
+    description: Five minutes after the run would have started, on run days only.
+    triggers:
+      - trigger: time
+        at: "10:05:00"
+    conditions:
+      - condition: time
+        weekday: [mon, wed]
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.skip_bedroom_vacuum
