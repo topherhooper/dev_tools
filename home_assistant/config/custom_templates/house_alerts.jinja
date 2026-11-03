@@ -32,6 +32,7 @@
   {%- set RH_MAX = 60 -%}
   {%- set TONER_MIN = 10 -%}
   {%- set BACKUP_MAX_AGE_H = 48 -%}
+  {%- set DUST_MITE_RH_MAX = 50 -%}
 
   {%- set ns = namespace(items=[]) -%}
 
@@ -118,6 +119,21 @@
           'title': 'Backup is stale',
           'detail': 'last good backup ' ~ (((as_timestamp(now()) - as_timestamp(last_backup, 0)) / 3600) | round(0) | int) ~ 'h ago'}] -%}
   {%- endif -%}
+
+  {#- Dust mites: they need humidity to stay high, so this reads the 24h averages from
+      packages/dust_mites.yaml, never the live reading. Unknown (first day after a
+      restart, or a sensor offline) is -1 and cannot fire. -#}
+  {%- for room, slug, ent in [
+        ('Master Bedroom', 'master', 'sensor.master_bedroom_humidity_24h'),
+        ("Astrid's room", 'astrid', 'sensor.astrid_s_room_humidity_24h')] -%}
+    {%- set avg = states(ent) | float(-1) -%}
+    {%- if avg > DUST_MITE_RH_MAX -%}
+      {%- set ns.items = ns.items + [{
+            'id': 'dust_mite_' ~ slug, 'sev': 'warn', 'icon': 'mdi:bed',
+            'title': 'Dust-mite humidity — ' ~ room,
+            'detail': '24h average ' ~ (avg | round(0) | int) ~ '% (keep under ' ~ DUST_MITE_RH_MAX ~ '%)'}] -%}
+    {%- endif -%}
+  {%- endfor -%}
 
   {{- ns.items | to_json -}}
 {%- endmacro -%}
