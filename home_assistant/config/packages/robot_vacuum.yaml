@@ -2,8 +2,13 @@
 #
 # The Roborock Q5 lives downstairs and runs its own routines at night, when the
 # bedrooms are occupied, so the two bedrooms on its map were never cleaned. This
-# sends it there on weekday mornings instead. Upstairs is beyond the robot; the
-# cleaner covers the whole house every two weeks.
+# sends it there at 10:00 on Monday and Wednesday, the two weekdays both rooms
+# are reliably empty all day. Upstairs is beyond the robot; the cleaner covers
+# the whole house every other Friday, which is why Friday is left out.
+#
+# No sensor in the house can tell when the kids are unexpectedly home (sick day,
+# daycare closed), so that is a switch: flip "Kids home today" on and the run is
+# skipped. It resets itself at midnight so it cannot be left on by mistake.
 #
 # Segment ids come from the roborock.get_maps action (map 0). Room names are
 # edited in the Roborock app; after a rename, reload the Roborock integration
@@ -11,33 +16,34 @@
 #   16 Green room, 17 Living room, 18 Bathroom, 19 Kitchen,
 #   20 Large bedroom, 21 Dining room, 22 Small Bedroom
 
+input_boolean:
+  kids_home_today:
+    name: Kids home today
+    icon: mdi:home-heart
+
 automation:
   - id: robot_vacuum_downstairs_bedrooms
-    alias: Robot vacuum - downstairs bedrooms twice a week
+    alias: Robot vacuum - downstairs bedrooms
     description: >-
-      Segment-cleans the Large and Small bedrooms on Tuesday and Friday
-      mornings, if the robot is docked, reports no error, and nobody is asleep
-      in Astrid's room (the Hatch sound machine is not playing).
+      Segment-cleans the Large and Small bedrooms at 10:00 on Monday and
+      Wednesday, unless the robot is off its dock, reports an error, or
+      "Kids home today" is on.
     mode: single
     triggers:
       - trigger: time
-        at: "10:30:00"
+        at: "10:00:00"
     conditions:
       - condition: time
-        weekday: [tue, fri]
+        weekday: [mon, wed]
       - condition: state
         entity_id: vacuum.roborock_q5
         state: docked
       - condition: state
         entity_id: sensor.roborock_q5_vacuum_error
         state: none
-      # The Hatch plays white noise whenever Astrid is put down; a nap at 10:30
-      # is more likely than not on some days, and the robot is loud.
-      - condition: not
-        conditions:
-          - condition: state
-            entity_id: media_player.astrid_media_player
-            state: playing
+      - condition: state
+        entity_id: input_boolean.kids_home_today
+        state: "off"
     actions:
       - action: vacuum.send_command
         target:
@@ -47,3 +53,14 @@ automation:
           params:
             - segments: [20, 22]
               repeat: 1
+
+  - id: kids_home_today_reset
+    alias: Kids home today - reset at midnight
+    description: Turns the "Kids home today" switch off so it never stays on by mistake.
+    triggers:
+      - trigger: time
+        at: "00:00:00"
+    actions:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.kids_home_today
