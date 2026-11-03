@@ -1,35 +1,41 @@
 # Dust mites — a sustained-humidity watch for the rooms people sleep in.
 #
 # Mites need relative humidity above about 50% to thrive and dry out when it
-# stays below, so the alert reads a 24-hour average rather than the live value:
-# a shower or one humid evening does not matter, a week at 55% does. The
+# stays below, so the alert reads a 7-day average rather than the live value:
+# a shower or one humid evening does not matter, a week at 55% does. A 24-hour
+# window was tried first and flickered: the Master Bedroom averages 49.7% with
+# 40% of each day above 50%, and every flicker re-notifies. The
 # threshold itself (DUST_MITE_RH_MAX) lives in custom_templates/house_alerts.jinja
 # with every other threshold; this file only provides the averaged sensors.
 #
 # Master Bedroom reads the ALPSTUGA monitor, the room's canonical sensor in the
 # air-quality rules (the Nest thermostat there reads ~2 points higher). Astrid's
-# room has no monitor, so it reads the Nest. Kitchen and basement are not
-# sleeping rooms and keep the plain "Humidity high" rule.
+# room has no monitor, so it reads the Nest, which reports about once a day
+# (integer %, only on change) — hence keep_last_sample, or the window could
+# empty and the sensor read unknown. Kitchen and basement are not sleeping
+# rooms and keep the plain "Humidity high" rule.
 
 sensor:
   - platform: statistics
-    name: Master Bedroom Humidity 24h
-    unique_id: master_bedroom_humidity_24h
+    name: Master Bedroom Humidity 7d
+    unique_id: master_bedroom_humidity_7d
     entity_id: sensor.alpstuga_air_quality_monitor_humidity
     # Time-weighted: a reading counts until the next one replaces it.
     state_characteristic: average_step
     max_age:
-      hours: 24
+      days: 7
     # The monitor reports ~1,700 times a day; this is a cap, not a window.
-    sampling_size: 4000
+    sampling_size: 15000
+    keep_last_sample: true
     precision: 0
 
   - platform: statistics
-    name: Astrid's Room Humidity 24h
-    unique_id: astrids_room_humidity_24h
+    name: Astrid's Room Humidity 7d
+    unique_id: astrids_room_humidity_7d
     entity_id: sensor.astrid_s_temp_humidity
     state_characteristic: average_step
     max_age:
-      hours: 24
-    sampling_size: 4000
+      days: 7
+    sampling_size: 15000
+    keep_last_sample: true
     precision: 0

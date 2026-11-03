@@ -120,18 +120,18 @@
           'detail': 'last good backup ' ~ (((as_timestamp(now()) - as_timestamp(last_backup, 0)) / 3600) | round(0) | int) ~ 'h ago'}] -%}
   {%- endif -%}
 
-  {#- Dust mites: they need humidity to stay high, so this reads the 24h averages from
-      packages/dust_mites.yaml, never the live reading. Unknown (first day after a
-      restart, or a sensor offline) is -1 and cannot fire. -#}
+  {#- Dust mites: they need humidity to stay high, so this reads the 7-day averages from
+      packages/dust_mites.yaml, never the live reading. Unknown (sensor offline) is -1
+      and cannot fire. -#}
   {%- for room, slug, ent in [
-        ('Master Bedroom', 'master', 'sensor.master_bedroom_humidity_24h'),
-        ("Astrid's room", 'astrid', 'sensor.astrid_s_room_humidity_24h')] -%}
+        ('Master Bedroom', 'master', 'sensor.master_bedroom_humidity_7d'),
+        ("Astrid's room", 'astrid', 'sensor.astrid_s_room_humidity_7d')] -%}
     {%- set avg = states(ent) | float(-1) -%}
     {%- if avg > DUST_MITE_RH_MAX -%}
       {%- set ns.items = ns.items + [{
             'id': 'dust_mite_' ~ slug, 'sev': 'warn', 'icon': 'mdi:bed',
             'title': 'Dust-mite humidity — ' ~ room,
-            'detail': '24h average ' ~ (avg | round(0) | int) ~ '% (keep under ' ~ DUST_MITE_RH_MAX ~ '%)'}] -%}
+            'detail': '7-day average ' ~ (avg | round(0) | int) ~ '% (keep under ' ~ DUST_MITE_RH_MAX ~ '%)'}] -%}
     {%- endif -%}
   {%- endfor -%}
 
