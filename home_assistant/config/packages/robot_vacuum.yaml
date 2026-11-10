@@ -14,8 +14,8 @@
 #
 # Bedrooms: the evening runs happen when the bedrooms are occupied, so the two
 # bedrooms on its map were never cleaned. This sends it there at 10:00 on
-# Monday and Wednesday, the two weekdays both rooms are reliably empty all day.
-# Upstairs is beyond the robot; the cleaner covers the whole house every other
+# Monday and Wednesday, the two weekdays both rooms are reliably empty all day,
+# one room at a time like the evenings. Upstairs is beyond the robot; the cleaner covers the whole house every other
 # Friday, which is why Friday is left out.
 #
 # No sensor in the house can tell when the kids are unexpectedly home (sick day,
@@ -117,8 +117,8 @@ automation:
   - id: robot_vacuum_downstairs_bedrooms
     alias: Robot vacuum - downstairs bedrooms
     description: >-
-      Segment-cleans the Large and Small bedrooms at 10:00 on Monday and
-      Wednesday, unless the robot is off its dock, reports an error, or
+      Cleans the Large bedroom, then the Small bedroom, one room at a time
+      from 10:00 on Monday and Wednesday, unless the robot is off its dock, reports an error, or
       "Skip next bedroom vacuum" is on.
     mode: single
     triggers:
@@ -137,14 +137,9 @@ automation:
         entity_id: input_boolean.skip_bedroom_vacuum
         state: "off"
     actions:
-      - action: vacuum.send_command
-        target:
-          entity_id: vacuum.roborock_q5
+      - action: script.robot_vacuum_rooms_one_at_a_time
         data:
-          command: app_segment_clean
-          params:
-            - segments: [20, 22]
-              repeat: 1
+          segments: [20, 22]
 
   # The evening before a run. The button turns the skip switch on from the
   # notification, which is the whole reason the switch resets after the run
