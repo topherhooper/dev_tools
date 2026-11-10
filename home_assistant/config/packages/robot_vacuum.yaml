@@ -4,10 +4,13 @@
 # changed in one place. The app's own scheduled cleaning must stay switched off,
 # or it runs alongside these.
 #
-# Evenings: the app's "Full Cleaning" routine, Sunday, Tuesday and Thursday at
-# 21:00 — moved here unchanged from the app's schedule. It is started with the
-# routine's button entity, so the routine itself (rooms, suction, order) is
-# still edited in the app.
+# Evenings: Sunday, Tuesday and Thursday at 21:00, the rooms the app's "Full
+# Cleaning" routine reached — Kitchen, Dining room, Corridor, Living room — one
+# room per run. In a single pass the bin filled up partway and the robot came
+# home with half its battery left and rooms unfinished; the dock only empties
+# the bin between runs, so each room now gets an empty bin. The Living room is
+# last because that is where the robot gets trapped, and a trap stops the
+# sequence rather than costing the other rooms.
 #
 # Bedrooms: the evening runs happen when the bedrooms are occupied, so the two
 # bedrooms on its map were never cleaned. This sends it there at 10:00 on
@@ -24,20 +27,75 @@
 # edited in the Roborock app; after a rename, reload the Roborock integration
 # or get_maps keeps returning the old ones.
 #   16 Green room, 17 Living room, 18 Bathroom, 19 Kitchen,
-#   20 Large bedroom, 21 Dining room, 22 Small Bedroom
+#   20 Large bedroom, 21 Dining room, 22 Small Bedroom, 23 Corridor
+# (checked 2026-11-10)
 
 input_boolean:
   skip_bedroom_vacuum:
     name: Skip next bedroom vacuum
     icon: mdi:robot-vacuum-off
 
+script:
+  robot_vacuum_rooms_one_at_a_time:
+    alias: Robot vacuum - clean rooms one at a time
+    description: >-
+      Segment-cleans each room in turn, waiting for the robot to dock and the
+      dock to empty the bin before the next. Stops at the first error, or if a
+      room does not start or finish in time.
+    icon: mdi:robot-vacuum
+    mode: single
+    fields:
+      segments:
+        name: Segments
+        description: Room segment ids from roborock.get_maps, in cleaning order.
+        required: true
+        example: "[19, 21]"
+        selector:
+          object: {}
+    sequence:
+      - repeat:
+          for_each: "{{ segments }}"
+          sequence:
+            - action: vacuum.send_command
+              target:
+                entity_id: vacuum.roborock_q5
+              data:
+                command: app_segment_clean
+                params:
+                  - segments: ["{{ repeat.item }}"]
+                    repeat: 1
+            - wait_for_trigger:
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: cleaning
+              timeout: "00:02:00"
+              continue_on_timeout: false
+            - wait_for_trigger:
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: docked
+                  id: docked
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: error
+                  id: error
+              timeout: "01:00:00"
+              continue_on_timeout: false
+            - if:
+                - condition: template
+                  value_template: "{{ wait.trigger.id == 'error' }}"
+              then:
+                - stop: Robot reported an error; leaving the remaining rooms.
+            # Auto-empty runs as soon as it docks and takes under a minute.
+            - delay: "00:03:00"
+
 automation:
   - id: robot_vacuum_full_cleaning
-    alias: Robot vacuum - evening full cleaning
+    alias: Robot vacuum - evening rooms
     description: >-
-      Starts the Roborock app's "Full Cleaning" routine at 21:00 on Sunday,
-      Tuesday and Thursday, unless the robot is off its dock or reports an
-      error.
+      Cleans the Kitchen, Dining room, Corridor and Living room one room at a
+      time from 21:00 on Sunday, Tuesday and Thursday, unless the robot is off
+      its dock or reports an error.
     mode: single
     triggers:
       - trigger: time
@@ -52,9 +110,9 @@ automation:
         entity_id: sensor.roborock_q5_vacuum_error
         state: none
     actions:
-      - action: button.press
-        target:
-          entity_id: button.roborock_q5_full_cleaning
+      - action: script.robot_vacuum_rooms_one_at_a_time
+        data:
+          segments: [19, 21, 23, 17]
 
   - id: robot_vacuum_downstairs_bedrooms
     alias: Robot vacuum - downstairs bedrooms
