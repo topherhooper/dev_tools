@@ -1,10 +1,22 @@
-# Robot vacuum schedule — the bedrooms it can reach.
+# Robot vacuum schedule — every run the Roborock Q5 makes on a timer.
 #
-# The Roborock Q5 lives downstairs and runs its own routines at night, when the
-# bedrooms are occupied, so the two bedrooms on its map were never cleaned. This
-# sends it there at 10:00 on Monday and Wednesday, the two weekdays both rooms
-# are reliably empty all day. Upstairs is beyond the robot; the cleaner covers
-# the whole house every other Friday, which is why Friday is left out.
+# Both schedules live here, not in the Roborock app, so they can be seen and
+# changed in one place. The app's own scheduled cleaning must stay switched off,
+# or it runs alongside these.
+#
+# Evenings: Sunday, Tuesday and Thursday at 21:00, the rooms the app's "Full
+# Cleaning" routine reached — Kitchen, Dining room, Corridor, Living room — one
+# room per run. In a single pass the bin filled up partway and the robot came
+# home with half its battery left and rooms unfinished; the dock only empties
+# the bin between runs, so each room now gets an empty bin. The Living room is
+# last because that is where the robot gets trapped, and a trap stops the
+# sequence rather than costing the other rooms.
+#
+# Bedrooms: the evening runs happen when the bedrooms are occupied, so the two
+# bedrooms on its map were never cleaned. This sends it there at 10:00 on
+# Monday and Wednesday, the two weekdays both rooms are reliably empty all day,
+# one room at a time like the evenings. Upstairs is beyond the robot; the cleaner covers the whole house every other
+# Friday, which is why Friday is left out.
 #
 # No sensor in the house can tell when the kids are unexpectedly home (sick day,
 # daycare closed), so that is a switch: "Skip next bedroom vacuum". A reminder
@@ -15,19 +27,98 @@
 # edited in the Roborock app; after a rename, reload the Roborock integration
 # or get_maps keeps returning the old ones.
 #   16 Green room, 17 Living room, 18 Bathroom, 19 Kitchen,
-#   20 Large bedroom, 21 Dining room, 22 Small Bedroom
+#   20 Large bedroom, 21 Dining room, 22 Small Bedroom, 23 Corridor
+# (checked 2026-11-10)
 
 input_boolean:
   skip_bedroom_vacuum:
     name: Skip next bedroom vacuum
     icon: mdi:robot-vacuum-off
 
+script:
+  robot_vacuum_rooms_one_at_a_time:
+    alias: Robot vacuum - clean rooms one at a time
+    description: >-
+      Segment-cleans each room in turn, waiting for the robot to dock and the
+      dock to empty the bin before the next. Stops at the first error, or if a
+      room does not start or finish in time.
+    icon: mdi:robot-vacuum
+    mode: single
+    fields:
+      segments:
+        name: Segments
+        description: Room segment ids from roborock.get_maps, in cleaning order.
+        required: true
+        example: "[19, 21]"
+        selector:
+          object: {}
+    sequence:
+      - repeat:
+          for_each: "{{ segments }}"
+          sequence:
+            - action: vacuum.send_command
+              target:
+                entity_id: vacuum.roborock_q5
+              data:
+                command: app_segment_clean
+                params:
+                  - segments: ["{{ repeat.item }}"]
+                    repeat: 1
+            - wait_for_trigger:
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: cleaning
+              timeout: "00:02:00"
+              continue_on_timeout: false
+            - wait_for_trigger:
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: docked
+                  id: docked
+                - trigger: state
+                  entity_id: vacuum.roborock_q5
+                  to: error
+                  id: error
+              timeout: "01:00:00"
+              continue_on_timeout: false
+            - if:
+                - condition: template
+                  value_template: "{{ wait.trigger.id == 'error' }}"
+              then:
+                - stop: Robot reported an error; leaving the remaining rooms.
+            # Auto-empty runs as soon as it docks and takes under a minute.
+            - delay: "00:03:00"
+
 automation:
+  - id: robot_vacuum_full_cleaning
+    alias: Robot vacuum - evening rooms
+    description: >-
+      Cleans the Kitchen, Dining room, Corridor and Living room one room at a
+      time from 21:00 on Sunday, Tuesday and Thursday, unless the robot is off
+      its dock or reports an error.
+    mode: single
+    triggers:
+      - trigger: time
+        at: "21:00:00"
+    conditions:
+      - condition: time
+        weekday: [sun, tue, thu]
+      - condition: state
+        entity_id: vacuum.roborock_q5
+        state: docked
+      - condition: state
+        entity_id: sensor.roborock_q5_vacuum_error
+        state: none
+    actions:
+      - action: script.robot_vacuum_rooms_one_at_a_time
+        data:
+          segments: [19, 21, 23, 17]
+
   - id: robot_vacuum_downstairs_bedrooms
     alias: Robot vacuum - downstairs bedrooms
     description: >-
-      Segment-cleans the Large and Small bedrooms at 10:00 on Monday and
-      Wednesday, unless the robot is off its dock, reports an error, or
+      Cleans the Large bedroom, then the Small bedroom, one room at a time
+      from 10:00 on Monday and Wednesday, unless the robot is off its dock, reports an error, or
       "Skip next bedroom vacuum" is on.
     mode: single
     triggers:
@@ -46,14 +137,9 @@ automation:
         entity_id: input_boolean.skip_bedroom_vacuum
         state: "off"
     actions:
-      - action: vacuum.send_command
-        target:
-          entity_id: vacuum.roborock_q5
+      - action: script.robot_vacuum_rooms_one_at_a_time
         data:
-          command: app_segment_clean
-          params:
-            - segments: [20, 22]
-              repeat: 1
+          segments: [20, 22]
 
   # The evening before a run. The button turns the skip switch on from the
   # notification, which is the whole reason the switch resets after the run
