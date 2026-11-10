@@ -1,10 +1,19 @@
-# Robot vacuum schedule — the bedrooms it can reach.
+# Robot vacuum schedule — every run the Roborock Q5 makes on a timer.
 #
-# The Roborock Q5 lives downstairs and runs its own routines at night, when the
-# bedrooms are occupied, so the two bedrooms on its map were never cleaned. This
-# sends it there at 10:00 on Monday and Wednesday, the two weekdays both rooms
-# are reliably empty all day. Upstairs is beyond the robot; the cleaner covers
-# the whole house every other Friday, which is why Friday is left out.
+# Both schedules live here, not in the Roborock app, so they can be seen and
+# changed in one place. The app's own scheduled cleaning must stay switched off,
+# or it runs alongside these.
+#
+# Evenings: the app's "Full Cleaning" routine, Sunday, Tuesday and Thursday at
+# 21:00 — moved here unchanged from the app's schedule. It is started with the
+# routine's button entity, so the routine itself (rooms, suction, order) is
+# still edited in the app.
+#
+# Bedrooms: the evening runs happen when the bedrooms are occupied, so the two
+# bedrooms on its map were never cleaned. This sends it there at 10:00 on
+# Monday and Wednesday, the two weekdays both rooms are reliably empty all day.
+# Upstairs is beyond the robot; the cleaner covers the whole house every other
+# Friday, which is why Friday is left out.
 #
 # No sensor in the house can tell when the kids are unexpectedly home (sick day,
 # daycare closed), so that is a switch: "Skip next bedroom vacuum". A reminder
@@ -23,6 +32,30 @@ input_boolean:
     icon: mdi:robot-vacuum-off
 
 automation:
+  - id: robot_vacuum_full_cleaning
+    alias: Robot vacuum - evening full cleaning
+    description: >-
+      Starts the Roborock app's "Full Cleaning" routine at 21:00 on Sunday,
+      Tuesday and Thursday, unless the robot is off its dock or reports an
+      error.
+    mode: single
+    triggers:
+      - trigger: time
+        at: "21:00:00"
+    conditions:
+      - condition: time
+        weekday: [sun, tue, thu]
+      - condition: state
+        entity_id: vacuum.roborock_q5
+        state: docked
+      - condition: state
+        entity_id: sensor.roborock_q5_vacuum_error
+        state: none
+    actions:
+      - action: button.press
+        target:
+          entity_id: button.roborock_q5_full_cleaning
+
   - id: robot_vacuum_downstairs_bedrooms
     alias: Robot vacuum - downstairs bedrooms
     description: >-
