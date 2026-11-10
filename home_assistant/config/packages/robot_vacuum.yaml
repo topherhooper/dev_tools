@@ -50,8 +50,6 @@ script:
         description: Room segment ids from roborock.get_maps, in cleaning order.
         required: true
         example: "[19, 21]"
-        selector:
-          object: {}
     sequence:
       - repeat:
           for_each: "{{ segments }}"
