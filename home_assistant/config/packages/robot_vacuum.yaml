@@ -23,6 +23,15 @@
 # the evening before carries a button that flips it, or flip it by hand; it
 # resets itself just after the run time so it cannot be left on by mistake.
 #
+# Rooms: each scheduled room has its own setting, "Vacuum <room>", so one room
+# can come out of a schedule without touching the YAML:
+#   On schedule    cleaned on its usual days
+#   Skip next run  left out of the next run that starts, then back to On schedule
+#   Disabled       left out until it is set back to On schedule
+# A skip is used up when a run actually starts, not at the scheduled time, so
+# if the robot is off its dock at 21:00 the room stays skipped for the next one.
+# "Skip next bedroom vacuum" still skips the whole bedroom run.
+#
 # Segment ids come from the roborock.get_maps action (map 0). Room names are
 # edited in the Roborock app; after a rename, reload the Roborock integration
 # or get_maps keeps returning the old ones.
@@ -34,6 +43,40 @@ input_boolean:
   skip_bedroom_vacuum:
     name: Skip next bedroom vacuum
     icon: mdi:robot-vacuum-off
+
+input_select:
+  vacuum_kitchen:
+    name: Vacuum Kitchen
+    icon: mdi:robot-vacuum
+    options: &room_options
+      - On schedule
+      - Skip next run
+      - Disabled
+
+  vacuum_dining_room:
+    name: Vacuum Dining room
+    icon: mdi:robot-vacuum
+    options: *room_options
+
+  vacuum_corridor:
+    name: Vacuum Corridor
+    icon: mdi:robot-vacuum
+    options: *room_options
+
+  vacuum_living_room:
+    name: Vacuum Living room
+    icon: mdi:robot-vacuum
+    options: *room_options
+
+  vacuum_large_bedroom:
+    name: Vacuum Large bedroom
+    icon: mdi:robot-vacuum
+    options: *room_options
+
+  vacuum_small_bedroom:
+    name: Vacuum Small bedroom
+    icon: mdi:robot-vacuum
+    options: *room_options
 
 script:
   robot_vacuum_rooms_one_at_a_time:
@@ -93,7 +136,8 @@ automation:
     description: >-
       Cleans the Kitchen, Dining room, Corridor and Living room one room at a
       time from 21:00 on Sunday, Tuesday and Thursday, unless the robot is off
-      its dock or reports an error.
+      its dock or reports an error. Rooms whose "Vacuum <room>" setting is not
+      On schedule are left out.
     mode: single
     triggers:
       - trigger: time
@@ -107,17 +151,45 @@ automation:
       - condition: state
         entity_id: sensor.roborock_q5_vacuum_error
         state: none
+    variables:
+      # Cleaning order, and the setting that can take each room out.
+      rooms:
+        - segment: 19
+          setting: input_select.vacuum_kitchen
+        - segment: 21
+          setting: input_select.vacuum_dining_room
+        - segment: 23
+          setting: input_select.vacuum_corridor
+        - segment: 17
+          setting: input_select.vacuum_living_room
+      segments: >-
+        {{ rooms | selectattr('setting', 'is_state', 'On schedule')
+           | map(attribute='segment') | list }}
+      skipped: >-
+        {{ rooms | selectattr('setting', 'is_state', 'Skip next run')
+           | map(attribute='setting') | list }}
     actions:
-      - action: script.robot_vacuum_rooms_one_at_a_time
-        data:
-          segments: [19, 21, 23, 17]
+      - repeat:
+          for_each: "{{ skipped }}"
+          sequence:
+            - action: input_select.select_option
+              target:
+                entity_id: "{{ repeat.item }}"
+              data:
+                option: On schedule
+      - if: "{{ segments | count > 0 }}"
+        then:
+          - action: script.robot_vacuum_rooms_one_at_a_time
+            data:
+              segments: "{{ segments }}"
 
   - id: robot_vacuum_downstairs_bedrooms
     alias: Robot vacuum - downstairs bedrooms
     description: >-
       Cleans the Large bedroom, then the Small bedroom, one room at a time
       from 10:00 on Monday and Wednesday, unless the robot is off its dock, reports an error, or
-      "Skip next bedroom vacuum" is on.
+      "Skip next bedroom vacuum" is on. Rooms whose "Vacuum <room>" setting is
+      not On schedule are left out.
     mode: single
     triggers:
       - trigger: time
@@ -134,10 +206,33 @@ automation:
       - condition: state
         entity_id: input_boolean.skip_bedroom_vacuum
         state: "off"
+    variables:
+      # Cleaning order, and the setting that can take each room out.
+      rooms:
+        - segment: 20
+          setting: input_select.vacuum_large_bedroom
+        - segment: 22
+          setting: input_select.vacuum_small_bedroom
+      segments: >-
+        {{ rooms | selectattr('setting', 'is_state', 'On schedule')
+           | map(attribute='segment') | list }}
+      skipped: >-
+        {{ rooms | selectattr('setting', 'is_state', 'Skip next run')
+           | map(attribute='setting') | list }}
     actions:
-      - action: script.robot_vacuum_rooms_one_at_a_time
-        data:
-          segments: [20, 22]
+      - repeat:
+          for_each: "{{ skipped }}"
+          sequence:
+            - action: input_select.select_option
+              target:
+                entity_id: "{{ repeat.item }}"
+              data:
+                option: On schedule
+      - if: "{{ segments | count > 0 }}"
+        then:
+          - action: script.robot_vacuum_rooms_one_at_a_time
+            data:
+              segments: "{{ segments }}"
 
   # The evening before a run. The button turns the skip switch on from the
   # notification, which is the whole reason the switch resets after the run
