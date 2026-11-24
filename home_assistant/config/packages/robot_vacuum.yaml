@@ -162,13 +162,16 @@ automation:
           setting: input_select.vacuum_corridor
         - segment: 17
           setting: input_select.vacuum_living_room
-      segments: >-
+      # The rest of this automation is the same for every schedule, so it is
+      # written once here and reused below through the YAML anchors.
+      segments: &on_schedule_segments >-
         {{ rooms | selectattr('setting', 'is_state', 'On schedule')
            | map(attribute='segment') | list }}
-      skipped: >-
+      skipped: &skipped_settings >-
         {{ rooms | selectattr('setting', 'is_state', 'Skip next run')
            | map(attribute='setting') | list }}
-    actions:
+    actions: &clean_scheduled_rooms
+      # Use up each skip, then clean whatever is left.
       - repeat:
           for_each: "{{ skipped }}"
           sequence:
@@ -213,26 +216,9 @@ automation:
           setting: input_select.vacuum_large_bedroom
         - segment: 22
           setting: input_select.vacuum_small_bedroom
-      segments: >-
-        {{ rooms | selectattr('setting', 'is_state', 'On schedule')
-           | map(attribute='segment') | list }}
-      skipped: >-
-        {{ rooms | selectattr('setting', 'is_state', 'Skip next run')
-           | map(attribute='setting') | list }}
-    actions:
-      - repeat:
-          for_each: "{{ skipped }}"
-          sequence:
-            - action: input_select.select_option
-              target:
-                entity_id: "{{ repeat.item }}"
-              data:
-                option: On schedule
-      - if: "{{ segments | count > 0 }}"
-        then:
-          - action: script.robot_vacuum_rooms_one_at_a_time
-            data:
-              segments: "{{ segments }}"
+      segments: *on_schedule_segments
+      skipped: *skipped_settings
+    actions: *clean_scheduled_rooms
 
   # The evening before a run. The button turns the skip switch on from the
   # notification, which is the whole reason the switch resets after the run
