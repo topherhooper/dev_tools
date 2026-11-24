@@ -8,9 +8,8 @@
 #   items          list of {id, sev, icon, title, detail}, newest rules last
 #
 # The dashboard renders `items` instead of the 20 hand-written alert cards it
-# replaces. A follow-up change retires the six notification automations in
-# automations.yaml in favour of one that reads this sensor — they are still in
-# charge until then, so nothing here notifies anybody yet.
+# replaces, and the automation at the bottom of this file is the only thing
+# that notifies about them.
 
 template:
   - sensor:
