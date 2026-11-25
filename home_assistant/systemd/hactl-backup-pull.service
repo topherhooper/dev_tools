@@ -10,7 +10,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 WorkingDirectory=%h/projects/dev_tools/home_assistant
-ExecStart=%h/projects/dev_tools/home_assistant/.venv/bin/hactl backups pull
-# The pull exits non-zero when the newest backup is stale, which is the point:
+ExecStart=%h/projects/dev_tools/home_assistant/.venv/bin/hactl backups pull --stale-after 192
+# HA backs up weekly, so stale means over 8 days. The pull exits non-zero when the
+# newest backup is stale, which is the point:
 # a schedule that silently stops producing backups becomes a failed unit here
 # rather than silence.

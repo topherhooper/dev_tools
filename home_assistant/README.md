@@ -66,17 +66,29 @@ from this repo — so the backups are the real safety net, not the git history.
 HA OS runs off eMMC/SD, and its only backup agent (`hassio.local`) writes to that same
 card. Two layers, so a copy survives the card:
 
-1. **HA creates one nightly** at 04:15 to `hassio.local`, database and all add-ons
-   included, keeping 3 copies. Configured under Settings → System → Backups.
-2. **This machine pulls them off** with `hactl backups pull`, into
+1. **HA creates one weekly**, Sunday at 04:15, to `hassio.local`, database and all add-ons
+   included, keeping 3 copies (about three weeks). Configured under Settings → System →
+   Backups. `sensor.house_alerts` warns when the newest is over 8 days old.
+2. **Another machine pulls them off** with `hactl backups pull`, into
    `~/backups/home-assistant` (override with `HA_BACKUP_LOCAL`).
 
 The pull never deletes. HA prunes the host to 3 copies; the local side keeps every backup
 it has ever seen, which is the whole point of the second layer. It also exits non-zero
-when the newest backup is older than `--stale-after` (default 48h) — a schedule that
-quietly stops is the failure that actually happens, and this makes it loud.
+when the newest backup is older than `--stale-after` (default 48h; pass 192 for the weekly
+schedule) — a schedule that quietly stops is the failure that actually happens, and this
+makes it loud.
 
-To run it unattended, install the units from `systemd/`:
+The pull currently runs on the Windows desktop, from the Ubuntu (WSL) clone at
+`~/projects/dev_tools`, into `D:\Backups\home-assistant`. A Task Scheduler task named
+"Home Assistant backup pull" starts it every Sunday at 10:00, or at the next logon if the
+PC was off, and appends to `pull.log` in that folder:
+
+```
+wsl.exe -d Ubuntu -- bash -lc "cd ~/projects/dev_tools/home_assistant && .venv/bin/hactl backups pull --stale-after 192 >> /mnt/d/Backups/home-assistant/pull.log 2>&1"
+```
+
+On a Linux box, the units in `systemd/` do the same job (they run daily, which is harmless
+with a weekly backup):
 
 ```sh
 ln -s "$PWD"/systemd/hactl-backup-pull.{service,timer} ~/.config/systemd/user/
@@ -89,10 +101,12 @@ They assume this repo is at `~/projects/dev_tools`. The timer needs
 `loginctl enable-linger "$USER"` to run while you are not logged in.
 
 Backups are unencrypted, so the tars contain `secrets.yaml` and long-lived tokens in the
-clear. Treat `~/backups/home-assistant` accordingly, especially before syncing it anywhere.
+clear. Keep the folder they land in out of anything that syncs to the cloud.
 
 Both copies are in the same house, which covers a dead SD card but not fire or theft. An
-off-site leg is still missing.
+off-site leg is still missing. HA's built-in Google Drive location was tried and set aside
+(it needs your own Google Cloud OAuth client); its OneDrive location, or Home Assistant
+Cloud, are the simpler routes, and either wants backup encryption switched on first.
 
 ## Dashboards
 

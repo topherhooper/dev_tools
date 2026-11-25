@@ -1,4 +1,4 @@
-# Runs 45 minutes after Home Assistant's 04:15 backup window.
+# Runs daily at 05:00; Home Assistant backs up on Sunday at 04:15, so most runs find nothing new.
 # Not installed by this repo — see the Backups section of home_assistant/README.md.
 [Unit]
 Description=Daily pull of Home Assistant backups
