@@ -1,0 +1,372 @@
+views:
+  - title: Monitoring
+    path: monitoring
+    type: sections
+    max_columns: 1
+    sections:
+      - cards:
+          - type: heading
+            heading: Climate
+          - type: custom:mushroom-climate-card
+            entity: climate.master_bedroom
+            name: Master Bedroom
+            icon: mdi:thermostat
+            show_temperature_control: true
+            hvac_modes:
+              - heat_cool
+              - heat
+              - cool
+              - 'off'
+          - type: custom:mushroom-climate-card
+            entity: climate.astrid_s_temp
+            name: Astrid's Room
+            icon: mdi:thermostat
+            show_temperature_control: true
+            hvac_modes:
+              - heat_cool
+              - heat
+              - cool
+              - 'off'
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Outdoor Temperature
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+              annotations:
+                yaxis:
+                  - y: 32
+                    borderColor: '#2196f3'
+                    strokeDashArray: 4
+                    label:
+                      text: Freezing
+                      borderColor: '#2196f3'
+                      style:
+                        color: '#fff'
+                        background: '#2196f3'
+            series:
+              - entity: weather.forecast_home
+                name: Outdoor
+                stroke_width: 2
+                attribute: temperature
+                group_by:
+                  func: avg
+                  duration: 30min
+            yaxis:
+              - min: 30
+                max: 100
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Indoor Temperature
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+            series:
+              - entity: sensor.master_bedroom_temperature
+                name: Master Bedroom
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 30min
+              - entity: sensor.astrid_s_temp_temperature
+                name: Astrid's Room
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 30min
+            yaxis:
+              - min: 60
+                max: 85
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Outdoor Humidity
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+            series:
+              - entity: weather.forecast_home
+                name: Outdoor
+                stroke_width: 2
+                attribute: humidity
+                group_by:
+                  func: avg
+                  duration: 30min
+            yaxis:
+              - min: 0
+                max: 100
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Indoor Humidity
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+              annotations:
+                yaxis:
+                  - y: 30
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Too dry
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+                  - y: 60
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Too humid
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+            series:
+              - entity: sensor.master_bedroom_humidity
+                name: Master Bedroom
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 30min
+              - entity: sensor.astrid_s_temp_humidity
+                name: Astrid's Room
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 30min
+            yaxis:
+              - min: 25
+                max: 65
+      - cards:
+          - type: heading
+            heading: Air Quality
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: PM2.5
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+              annotations:
+                yaxis:
+                  - y: 12
+                    borderColor: '#ff9800'
+                    strokeDashArray: 4
+                    label:
+                      text: Moderate
+                      borderColor: '#ff9800'
+                      style:
+                        color: '#fff'
+                        background: '#ff9800'
+                  - y: 35
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Alert
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+            series:
+              - entity: sensor.alpstuga_air_quality_monitor_pm2_5
+                name: Master Bedroom
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_pm2_5_2
+                name: Main Floor
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_pm2_5_3
+                name: Basement
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+            yaxis:
+              - min: 0
+                max: 15
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: CO2
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+              annotations:
+                yaxis:
+                  - y: 800
+                    borderColor: '#ff9800'
+                    strokeDashArray: 4
+                    label:
+                      text: Stuffy
+                      borderColor: '#ff9800'
+                      style:
+                        color: '#fff'
+                        background: '#ff9800'
+                  - y: 1000
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Alert
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+            series:
+              - entity: sensor.alpstuga_air_quality_monitor_carbon_dioxide
+                name: Master Bedroom
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_carbon_dioxide_2
+                name: Main Floor
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_carbon_dioxide_3
+                name: Basement
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+            yaxis:
+              - min: 300
+                max: 1100
+          - type: custom:apexcharts-card
+            header:
+              show: true
+              title: Humidity
+            graph_span: 168h
+            apex_config:
+              chart:
+                height: 180
+              stroke:
+                width: 2
+                curve: smooth
+              annotations:
+                yaxis:
+                  - y: 30
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Too dry
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+                  - y: 60
+                    borderColor: '#f44336'
+                    strokeDashArray: 4
+                    label:
+                      text: Too humid
+                      borderColor: '#f44336'
+                      style:
+                        color: '#fff'
+                        background: '#f44336'
+            series:
+              - entity: sensor.alpstuga_air_quality_monitor_humidity
+                name: Master Bedroom
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_humidity_2
+                name: Main Floor
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+              - entity: sensor.alpstuga_air_quality_monitor_humidity_3
+                name: Basement
+                stroke_width: 2
+                group_by:
+                  func: avg
+                  duration: 1h
+            yaxis:
+              - min: 25
+                max: 65
+      - cards:
+          - type: heading
+            heading: Roborock Q5
+          - type: custom:mushroom-entity-card
+            entity: vacuum.roborock_q5
+            name: Roborock Q5
+            icon: mdi:robot-vacuum
+            secondary_info: state
+          - type: custom:mushroom-entity-card
+            entity: sensor.roborock_q5_battery
+            name: Battery
+            icon: mdi:battery
+          - type: gauge
+            entity: sensor.roborock_q5_filter_time_left
+            name: Filter
+            min: -150
+            max: 150
+            needle: true
+            severity:
+              green: 50
+              yellow: 10
+              red: -150
+          - type: gauge
+            entity: sensor.roborock_q5_side_brush_time_left
+            name: Side Brush
+            min: -150
+            max: 150
+            needle: true
+            severity:
+              green: 50
+              yellow: 10
+              red: -150
+          - type: gauge
+            entity: sensor.roborock_q5_main_brush_time_left
+            name: Main Brush
+            min: -150
+            max: 300
+            needle: true
+            severity:
+              green: 50
+              yellow: 10
+              red: -150
+          - type: gauge
+            entity: sensor.roborock_q5_sensor_time_left
+            name: Sensors
+            min: -150
+            max: 150
+            needle: true
+            severity:
+              green: 50
+              yellow: 10
+              red: -150
