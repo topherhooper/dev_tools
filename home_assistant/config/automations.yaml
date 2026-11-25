@@ -1,1 +1,136 @@
-[]
+- id: vacuum_run_bedrooms
+  alias: Vacuum - run bedrooms on schedule
+  description: When the "Vacuum bedrooms" schedule starts, cleans Large bedroom, Small
+    bedroom one room at a time, leaving out any room whose "skip" switch is on. Does
+    nothing if the robot is off its dock, reports an error, the whole run is skipped,
+    or every room is skipped. Edit days and times in the schedule helper.
+  triggers:
+  - trigger: state
+    entity_id: schedule.vacuum_bedrooms
+    from: 'off'
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: vacuum.roborock_q5
+    state: docked
+  - condition: state
+    entity_id: sensor.roborock_q5_vacuum_error
+    state: none
+  - condition: state
+    entity_id: input_boolean.skip_bedroom_vacuum
+    state: 'off'
+  - condition: template
+    value_template: '{{ segments | count > 0 }}'
+  actions:
+  - action: script.robot_vacuum_rooms_one_at_a_time
+    data:
+      segments: '{{ segments }}'
+  mode: single
+  variables:
+    segments: '{% set ns = namespace(l=[]) %}{% for s, e in [(20, ''input_boolean.vacuum_skip_large_bedroom''),
+      (22, ''input_boolean.vacuum_skip_small_bedroom'')] %}{% if not is_state(e, ''on'')
+      %}{% set ns.l = ns.l + [s] %}{% endif %}{% endfor %}{{ ns.l }}'
+- id: vacuum_run_evening_rooms
+  alias: Vacuum - run evening rooms on schedule
+  description: When the "Vacuum evening rooms" schedule starts, cleans Kitchen, Dining
+    room, Corridor, Living room one room at a time, leaving out any room whose "skip"
+    switch is on. Does nothing if the robot is off its dock, reports an error, the
+    whole run is skipped, or every room is skipped. Edit days and times in the schedule
+    helper.
+  triggers:
+  - trigger: state
+    entity_id: schedule.vacuum_evening_rooms
+    from: 'off'
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: vacuum.roborock_q5
+    state: docked
+  - condition: state
+    entity_id: sensor.roborock_q5_vacuum_error
+    state: none
+  - condition: state
+    entity_id: input_boolean.skip_evening_vacuum
+    state: 'off'
+  - condition: template
+    value_template: '{{ segments | count > 0 }}'
+  actions:
+  - action: script.robot_vacuum_rooms_one_at_a_time
+    data:
+      segments: '{{ segments }}'
+  mode: single
+  variables:
+    segments: '{% set ns = namespace(l=[]) %}{% for s, e in [(19, ''input_boolean.vacuum_skip_kitchen''),
+      (21, ''input_boolean.vacuum_skip_dining_room''), (23, ''input_boolean.vacuum_skip_corridor''),
+      (17, ''input_boolean.vacuum_skip_living_room'')] %}{% if not is_state(e, ''on'')
+      %}{% set ns.l = ns.l + [s] %}{% endif %}{% endfor %}{{ ns.l }}'
+- id: vacuum_skip_reset
+  alias: Vacuum - reset skip after the run time
+  description: When a vacuum schedule block ends (5 minutes after its start), turn
+    that run's skip switch and its room skip switches back off, so a skip only applies
+    to one run.
+  triggers:
+  - trigger: state
+    entity_id:
+    - schedule.vacuum_bedrooms
+    - schedule.vacuum_evening_rooms
+    from: 'on'
+    to: 'off'
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: '{{ [''input_boolean.skip_bedroom_vacuum'', ''input_boolean.vacuum_skip_large_bedroom'',
+        ''input_boolean.vacuum_skip_small_bedroom''] if trigger.entity_id == ''schedule.vacuum_bedrooms''
+        else [''input_boolean.skip_evening_vacuum'', ''input_boolean.vacuum_skip_kitchen'',
+        ''input_boolean.vacuum_skip_dining_room'', ''input_boolean.vacuum_skip_corridor'',
+        ''input_boolean.vacuum_skip_living_room''] }}'
+  mode: queued
+- id: vacuum_bedroom_reminder
+  alias: Vacuum - bedroom reminder the evening before
+  description: At 20:00, if the next bedroom run starts within 24 hours and is not
+    skipped, send a reminder with a Skip button.
+  triggers:
+  - trigger: time
+    at: '20:00:00'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.skip_bedroom_vacuum
+    state: 'off'
+  - condition: state
+    entity_id: schedule.vacuum_bedrooms
+    state: 'off'
+  - condition: template
+    value_template: '{% set t = state_attr(''schedule.vacuum_bedrooms'',''next_event'')
+      %}{{ t is not none and (as_datetime(t|string) - now()).total_seconds() < 86400
+      }}'
+  actions:
+  - action: notify.mobile_app_pixel_8
+    data:
+      title: Bedroom vacuum tomorrow at {{ (as_datetime(state_attr('schedule.vacuum_bedrooms','next_event')|string)|as_local).strftime('%H:%M')
+        }}
+      message: Clear the floors in both downstairs bedrooms at drop-off. If anyone
+        will be home, skip it.
+      data:
+        tag: bedroom-vacuum-reminder
+        actions:
+        - action: SKIP_BEDROOM_VACUUM
+          title: Skip tomorrow
+  mode: single
+- id: vacuum_bedroom_skip_action
+  alias: Vacuum - bedroom skip button pressed
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: SKIP_BEDROOM_VACUUM
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.skip_bedroom_vacuum
+  - action: notify.mobile_app_pixel_8
+    data:
+      title: Bedroom vacuum skipped
+      message: The next bedroom run is off. The skip resets itself afterwards.
+      data:
+        tag: bedroom-vacuum-reminder
+  mode: single
