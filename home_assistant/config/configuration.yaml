@@ -18,6 +18,20 @@ frontend:
 # here is ignored and raises a repair. Bans are still recorded in /config/ip_bans.yaml
 # on the host; delete a line there to unban an address.
 
+# Dashboards kept in git. Home stays UI-managed in .storage; a dashboard listed
+# here is read from its file instead and can no longer be edited in the UI.
+# After changing a file, use the dashboard's "Refresh" menu item (no restart).
+# Custom cards (Mushroom, ApexCharts) still come from the HACS resources in
+# .storage, which is why there is no `resources:` list here.
+lovelace:
+  dashboards:
+    monitoring-hub:
+      mode: yaml
+      title: Monitoring Hub
+      icon: mdi:monitor-dashboard
+      show_in_sidebar: true
+      filename: dashboards/monitoring-hub.yaml
+
 logger:
   default: warning
 
