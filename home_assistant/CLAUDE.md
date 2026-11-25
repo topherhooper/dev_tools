@@ -15,8 +15,11 @@
 - `make install` builds `.venv/` here; run the CLI as `.venv/bin/hactl`. `.env` and
   `config/secrets.yaml` are local, git-ignored copies of the `.example` files.
 - Deploy after a PR that touches `config/` merges: from an up-to-date `main`, run
-  `hactl deploy --dry-run`, then `hactl deploy`, without asking first. A merged change is
+  `make deploy` (a dry run, then the real thing), without asking first. A merged change is
   inert until it is deployed. Never deploy an unmerged branch.
+- Automations get edited in the HA UI between sessions, and deploy overwrites `automations.yaml`,
+  `scripts.yaml` and `scenes.yaml` on the host with the repo's copies. If the dry run lists any of
+  the three, stop: run `hactl pull`, get the result merged, and only then deploy.
 - Otherwise don't run `hactl deploy`, `reload`, or `call` (they change the live house) unless the user asks.
   `hactl backups pull` only reads from the host and writes under `~/backups`, so it is safe
   to run unasked — as is anything that just reads state (`ping`, `states`, `check`).

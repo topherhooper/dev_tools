@@ -32,8 +32,12 @@ check-config:
 	$(CONTAINER) run --rm -v "$(CURDIR)/config:/config:z" $(HA_IMAGE) \
 		python -m homeassistant --script check_config --config /config
 
+# Shows what would be copied, then copies it and reloads. A failed dry run stops
+# before anything reaches the host. Pass hactl flags with ARGS:
+#   make deploy ARGS=--restart
 deploy: install
-	$(BIN)/hactl deploy
+	$(BIN)/hactl deploy --dry-run
+	$(BIN)/hactl deploy $(ARGS)
 
 pull: install
 	$(BIN)/hactl pull

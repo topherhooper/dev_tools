@@ -36,8 +36,9 @@ Create the token in HA under **Profile → Security → Long-lived access tokens
 2. `make lint test`, plus `make check-config` if a container engine is available
    (podman by default; `make check-config CONTAINER=docker` for docker). The HA config
    check also runs in CI on every PR that touches `home_assistant/`.
-3. Deploy with `.venv/bin/hactl deploy --dry-run`, then `hactl deploy`. This rsyncs
-   `config/` to the host, has HA validate it, and reloads (`--restart` for a full restart).
+3. Deploy with `make deploy`, which runs `hactl deploy --dry-run` and then `hactl deploy`.
+   This rsyncs `config/` to the host, has HA validate it, and reloads
+   (`make deploy ARGS=--restart` for a full restart).
 4. If you edited automations, scripts or scenes in the HA UI, run `hactl pull` and commit the diff.
 
 Deploy never deletes files on the host and never copies `secrets.yaml`
