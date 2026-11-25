@@ -12,6 +12,7 @@ home_assistant/
 │   ├── scenes.yaml       # UI-managed
 │   ├── packages/         # hand-written features, one file per area/feature
 │   ├── custom_templates/ # Jinja macros shared by packages (see Alerts)
+│   ├── dashboards/       # dashboards in YAML mode (see Dashboards)
 │   └── secrets.example.yaml
 ├── src/hactl/            # CLI + API client
 └── tests/
@@ -91,6 +92,18 @@ clear. Treat `~/backups/home-assistant` accordingly, especially before syncing i
 
 Both copies are in the same house, which covers a dead SD card but not fire or theft. An
 off-site leg is still missing.
+
+## Dashboards
+
+Home is edited in the HA UI and lives in `.storage`, so only the backups hold it.
+Monitoring Hub is in YAML mode: `config/dashboards/monitoring-hub.yaml`, registered under
+`lovelace:` in `configuration.yaml`. Edit the file, deploy, then pick **Refresh** from the
+dashboard's menu; the UI editor is disabled for it. Utilities is deliberately not here:
+its charts hardcode the household's utility usage and this repo is public.
+
+Adding a YAML dashboard under a URL that a UI-managed one already uses needs a restart,
+after which the YAML one wins and HA logs that the stored one could not be registered.
+Delete the stored copy under Settings → Dashboards once the YAML one looks right.
 
 ## Getting config onto the host
 
