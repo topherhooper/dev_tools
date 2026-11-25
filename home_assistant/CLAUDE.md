@@ -15,7 +15,7 @@
 - `make install` builds `.venv/` here; run the CLI as `.venv/bin/hactl`. `.env` and
   `config/secrets.yaml` are local, git-ignored copies of the `.example` files.
 - Deploy after a PR that touches `config/` merges: from an up-to-date `main`, run
-  `hactl deploy --dry-run`, then `hactl deploy`, without asking first. A merged change is
+  `make deploy` (a dry run, then the real thing), without asking first. A merged change is
   inert until it is deployed. Never deploy an unmerged branch.
 - Otherwise don't run `hactl deploy`, `reload`, or `call` (they change the live house) unless the user asks.
   `hactl backups pull` only reads from the host and writes under `~/backups`, so it is safe
