@@ -106,6 +106,26 @@ Adding a YAML dashboard under a URL that a UI-managed one already uses needs a r
 after which the YAML one wins and HA logs that the stored one could not be registered.
 Delete the stored copy under Settings → Dashboards once the YAML one looks right.
 
+## Computers
+
+`config/packages/computers.yaml` watches the household PCs: online or offline, CPU, memory,
+fullest disk and hottest temperature sensor, shown in the Computers section of the Monitoring Hub.
+Alerts (always-on machine offline 15 min, disk at 90%/97%, memory at 95%, anything over 90 °C)
+go through the existing House Alerts notification.
+
+To add a machine:
+
+1. On the computer, install [Glances](https://glances.readthedocs.io/) (`pip install "glances[web]"`)
+   and have it start at login or boot as `glances -w` (web server on port 61208). Allow that port
+   through the firewall for the home network only.
+2. In Home Assistant: Settings > Devices & services > Add integration > Glances, with the
+   computer's address and port 61208.
+3. Open the new device and give it the label `computer`. Add `computer_always_on` as well if it
+   should alert when it goes offline; leave that off for machines that sleep or get shut down.
+
+No hostnames or addresses are kept in this repo; the labels decide what is monitored.
+Thresholds are in `config/custom_templates/computers.jinja`.
+
 ## Getting config onto the host
 
 - **Any install type (default):** `hactl deploy` uses rsync over SSH. It needs `rsync` on

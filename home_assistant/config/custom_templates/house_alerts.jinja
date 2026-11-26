@@ -135,5 +135,44 @@
     {%- endif -%}
   {%- endfor -%}
 
+  {#- Computers: see computers.jinja. Offline only alerts for machines labelled
+      `computer_always_on`, so a desktop that sleeps overnight stays quiet. -#}
+  {%- from 'computers.jinja' import computers, pc_thresholds -%}
+  {%- set pct = pc_thresholds() | from_json -%}
+  {%- for pc in computers() | from_json -%}
+    {%- if not pc.online -%}
+      {%- if pc.always_on and (pc.offline_min or 0) >= pct.offline_min -%}
+        {%- set ns.items = ns.items + [{
+              'id': 'pc_offline_' ~ pc.id, 'sev': 'alert', 'icon': 'mdi:desktop-classic',
+              'title': 'Computer offline — ' ~ pc.name,
+              'detail': 'not answering for ' ~ pc.offline_min ~ ' min'}] -%}
+      {%- endif -%}
+    {%- else -%}
+      {%- if pc.disk is not none and pc.disk >= pct.disk_alert -%}
+        {%- set ns.items = ns.items + [{
+              'id': 'pc_disk_full_' ~ pc.id, 'sev': 'alert', 'icon': 'mdi:harddisk-remove',
+              'title': 'Disk almost full — ' ~ pc.name,
+              'detail': (pc.disk_label ~ ' ' if pc.disk_label else '') ~ pc.disk ~ '% used'}] -%}
+      {%- elif pc.disk is not none and pc.disk >= pct.disk_warn -%}
+        {%- set ns.items = ns.items + [{
+              'id': 'pc_disk_low_' ~ pc.id, 'sev': 'warn', 'icon': 'mdi:harddisk',
+              'title': 'Disk space low — ' ~ pc.name,
+              'detail': (pc.disk_label ~ ' ' if pc.disk_label else '') ~ pc.disk ~ '% used'}] -%}
+      {%- endif -%}
+      {%- if pc.mem is not none and pc.mem >= pct.mem_warn -%}
+        {%- set ns.items = ns.items + [{
+              'id': 'pc_mem_' ~ pc.id, 'sev': 'warn', 'icon': 'mdi:memory',
+              'title': 'Memory nearly full — ' ~ pc.name,
+              'detail': pc.mem ~ '% used'}] -%}
+      {%- endif -%}
+      {%- if pc.temp_hot -%}
+        {%- set ns.items = ns.items + [{
+              'id': 'pc_hot_' ~ pc.id, 'sev': 'alert', 'icon': 'mdi:thermometer-alert',
+              'title': 'Computer overheating — ' ~ pc.name,
+              'detail': pc.temp ~ (pc.temp_unit or '') ~ ' hottest sensor'}] -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+
   {{- ns.items | to_json -}}
 {%- endmacro -%}

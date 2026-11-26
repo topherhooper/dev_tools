@@ -1,0 +1,100 @@
+{#-
+  Health of the household computers, read from the Glances integration.
+
+  Which machines count is decided in the Home Assistant UI, not here, so no hostname
+  or address ever lands in this (public) repo:
+
+    label `computer`            put it on each Glances device to monitor it
+    label `computer_always_on`  also add it to machines that should never be off
+                                 (a server, the living-room box); only these alert
+                                 when they go offline
+
+  Glances names its sensors after their translation keys, so a device's entities are
+  picked out by entity_id suffix: `_cpu_usage`, `_memory_usage`, `_disk_usage` and
+  `_temperature`. A Glances host that stops answering turns all of its entities
+  `unavailable`, which is how "offline" is detected; no separate ping is needed.
+
+  Thresholds live in pc_thresholds() below and are used by both house_alerts.jinja (the alerts) and the
+  Computers card on the Monitoring Hub, so the card and the alert cannot disagree.
+
+  Editing note: HA caches this file. After changing it, call
+  homeassistant.reload_custom_templates (or restart) or the old copy keeps running.
+-#}
+
+{%- macro pc_thresholds() -%}
+  {#- Percent full / percent used, °C, minutes. -#}
+  {{- {'disk_warn': 90, 'disk_alert': 97, 'mem_warn': 95,
+       'temp_warn_c': 90, 'offline_min': 15} | to_json -}}
+{%- endmacro -%}
+
+{#-
+  Returns a JSON array, one entry per labelled device, sorted by name:
+    {id, name, always_on, online, offline_min, cpu, mem, disk, disk_label,
+     temp, temp_unit, temp_hot}
+  Missing readings are null, so a machine without temperature sensors (most
+  Windows PCs) simply shows none instead of inventing an alert.
+-#}
+{%- macro computers() -%}
+  {%- set t = pc_thresholds() | from_json -%}
+  {%- set always_on = label_devices('computer_always_on') -%}
+  {%- set ns = namespace(items=[]) -%}
+  {%- for dev in label_devices('computer') -%}
+    {%- set dev_name = device_attr(dev, 'name_by_user') or device_attr(dev, 'name') -%}
+    {%- set ents = device_entities(dev) | select('match', 'sensor\\.') | list -%}
+    {%- set cpu_e = ents | select('search', '_cpu_usage$') | first -%}
+    {#- GPUs also report "<gpu> memory usage"; system memory has the shortest id. -#}
+    {%- set mem_list = ents | select('search', '_memory_usage$') | list -%}
+    {%- set mn = namespace(e=none) -%}
+    {%- for e in mem_list -%}
+      {%- if mn.e is none or e | length < mn.e | length -%}{%- set mn.e = e -%}{%- endif -%}
+    {%- endfor -%}
+
+    {#- Online when any of its sensors still has a value. -#}
+    {%- set live = ents | select('has_value') | list -%}
+    {%- set online = live | count > 0 -%}
+    {%- set offline_min = none -%}
+    {%- if not online and cpu_e -%}
+      {%- set offline_min = ((now() - states[cpu_e].last_changed).total_seconds() / 60) | round(0) | int -%}
+    {%- endif -%}
+
+    {%- set cpu = states(cpu_e) | float(none) if cpu_e else none -%}
+    {%- set mem = states(mn.e) | float(none) if mn.e else none -%}
+
+    {#- Fullest disk wins. -#}
+    {%- set dk = namespace(v=none, label=none) -%}
+    {%- for e in ents | select('search', '_disk_usage$') -%}
+      {%- set v = states(e) | float(none) -%}
+      {%- if v is not none and (dk.v is none or v > dk.v) -%}
+        {%- set dk.v = v -%}
+        {%- set dk.label = (state_attr(e, 'friendly_name') or e)
+                           | replace(dev_name, '') | regex_replace('(?i)\\s*disk usage$', '') | trim -%}
+      {%- endif -%}
+    {%- endfor -%}
+
+    {#- Hottest sensor wins. -#}
+    {%- set tp = namespace(v=none, unit=none) -%}
+    {%- for e in ents | select('search', '_temperature$') -%}
+      {%- set v = states(e) | float(none) -%}
+      {%- if v is not none and (tp.v is none or v > tp.v) -%}
+        {%- set tp.v = v -%}
+        {%- set tp.unit = state_attr(e, 'unit_of_measurement') -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- set temp_limit = t.temp_warn_c * 9 / 5 + 32 if tp.unit == '°F' else t.temp_warn_c -%}
+
+    {%- set ns.items = ns.items + [{
+          'id': dev,
+          'name': dev_name,
+          'always_on': dev in always_on,
+          'online': online,
+          'offline_min': offline_min,
+          'cpu': cpu | round(0) | int if cpu is not none else none,
+          'mem': mem | round(0) | int if mem is not none else none,
+          'disk': dk.v | round(0) | int if dk.v is not none else none,
+          'disk_label': dk.label,
+          'temp': tp.v | round(0) | int if tp.v is not none else none,
+          'temp_unit': tp.unit,
+          'temp_hot': tp.v is not none and tp.v > temp_limit}] -%}
+  {%- endfor -%}
+  {{- ns.items | sort(attribute='name') | to_json -}}
+{%- endmacro -%}
