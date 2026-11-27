@@ -115,9 +115,12 @@ go through the existing House Alerts notification.
 
 To add a machine:
 
-1. On the computer, install [Glances](https://glances.readthedocs.io/) (`pip install "glances[web]"`)
-   and have it start at login or boot as `glances -w` (web server on port 61208). Allow that port
-   through the firewall for the home network only.
+1. On the computer, run the setup script for its system from `scripts/glances/`. Each installs
+   Glances, starts it at login or boot as a web server on port 61208, and (Windows and Linux)
+   opens that port to the Home Assistant address only:
+   - Windows, in an administrator PowerShell: `.\install-windows.ps1 -HomeAssistantIp <address>`
+   - Linux: `./install-linux.sh <address>`
+   - macOS: `./install-macos.sh`
 2. In Home Assistant: Settings > Devices & services > Add integration > Glances, with the
    computer's address and port 61208.
 3. Open the new device and give it the label `computer`. Add `computer_always_on` as well if it
