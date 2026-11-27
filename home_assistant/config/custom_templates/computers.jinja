@@ -42,6 +42,11 @@
 -#}
 {%- macro computers() -%}
   {%- set t = pc_thresholds() | from_json -%}
+  {#- Labels and device membership are not states, so a template that found no
+      labelled device tracks nothing and would never render again: the first machine
+      to get the label would not appear until a restart. Reading now() makes Home
+      Assistant re-render this once a minute regardless. -#}
+  {%- set tick = now() -%}
   {%- set always_on = label_devices('computer_always_on') -%}
   {%- set ns = namespace(items=[]) -%}
   {%- for dev in label_devices('computer') -%}
