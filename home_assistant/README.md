@@ -127,6 +127,36 @@ Adding a YAML dashboard under a URL that a UI-managed one already uses needs a r
 after which the YAML one wins and HA logs that the stored one could not be registered.
 Delete the stored copy under Settings → Dashboards once the YAML one looks right.
 
+## Computers
+
+`config/packages/computers.yaml` watches the household PCs: online or offline, CPU, memory,
+fullest disk and hottest temperature sensor. The card is `config/dashboards/cards/computers.yaml`,
+included as a section by the dashboard that shows it.
+Alerts (always-on machine offline 15 min, disk at 90%/97%, memory at 95%, anything over 90 °C)
+go through the existing House Alerts notification.
+
+To add a machine:
+
+1. On the computer, run the setup script for its system from `scripts/glances/`. Each installs
+   Glances, starts it at login or boot as a web server on port 61208, and (Windows and Linux)
+   opens that port to the Home Assistant address only:
+   - Windows, in an administrator PowerShell: `.\install-windows.ps1 -HomeAssistantIp <address>`
+   - Linux: `./install-linux.sh <address>`
+   - macOS: `./install-macos.sh`
+2. In Home Assistant: Settings > Devices & services > Add integration > Glances, with the
+   computer's address and port 61208.
+3. Open the new device and give it the label `computer`. Add `computer_always_on` as well if it
+   should alert when it goes offline; leave that off for machines that sleep or get shut down.
+
+A computer nothing can be installed on, such as a work laptop, is monitored from the network
+instead: add it with the Ping integration (Add integration > Ping, its address) and give that
+device the `computer` label. It shows online or offline only, marked "network only", and a
+sleeping laptop reads as offline. Reserve each address in the router, since Ping follows an
+address rather than a machine.
+
+No hostnames or addresses are kept in this repo; the labels decide what is monitored.
+Thresholds are in `config/custom_templates/computers.jinja`.
+
 ## Network watch
 
 A watcher of our own for "is something on this computer using the network that was not
