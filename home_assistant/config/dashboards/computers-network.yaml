@@ -8,6 +8,8 @@ views:
     type: sections
     max_columns: 1
     sections:
+      # The Computers section comes from the PC health monitoring (packages/computers.yaml).
+      - !include cards/computers.yaml
       - cards:
           - type: heading
             heading: Network watch
