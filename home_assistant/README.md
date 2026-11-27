@@ -120,6 +120,45 @@ Adding a YAML dashboard under a URL that a UI-managed one already uses needs a r
 after which the YAML one wins and HA logs that the stored one could not be registered.
 Delete the stored copy under Settings → Dashboards once the YAML one looks right.
 
+## Network watch
+
+A watcher of our own for "is something on this computer using the network that was not
+before?". `scripts/netwatch/netwatch.py` runs on each computer as the logged-in user and
+posts a report to a Home Assistant webhook every five minutes; `packages/network_watch.yaml`
+keeps the latest report per computer in `sensor.network_watch`. Its only dependency is
+`psutil`. It never blocks anything and opens no port.
+
+It reports, per computer:
+
+- a program newly holding a connection to a public internet address;
+- a program newly accepting connections from other machines;
+- a program doing either from a temp or downloads folder, where droppers usually start;
+- on Windows, Microsoft Defender's status: real-time protection off, definitions more than
+  a week old, or detections in the last 7 days.
+
+For its first 3 days on a computer it learns what is normal without alerting (except the
+temp-folder rule). After that a new program raises one House Alert, stays on the Network
+watch card for a day, and then counts as known. Programs are told apart by path with version
+numbers removed, so an app updating itself is not news.
+
+What it is not: an antivirus. It has no list of known spyware, sees only the computers it is
+installed on (no phones, smart devices or work laptops), samples every 20 seconds so a very
+short connection can slip by, and anything with administrator rights can hide from it or
+stop it. Without administrator or root rights it names only programs it is allowed to see;
+on macOS and Linux that means your own, not system services.
+
+Setup, once:
+
+1. Add `netwatch_webhook_id: <long random string>` to `secrets.yaml` on the Home Assistant
+   host **before** deploying, or the config will not load.
+2. On each computer run the installer from `scripts/netwatch/` with the webhook address
+   `http://<home-assistant>:8123/api/webhook/<that string>`:
+   `install-windows.ps1 -WebhookUrl <address>`, `install-linux.sh <address>` or
+   `install-macos.sh <address>`.
+
+`python netwatch.py --once --print` shows what a computer would report without sending it.
+A computer that stops reporting for 30 days drops off the card.
+
 ## Getting config onto the host
 
 - **Any install type (default):** `hactl deploy` uses rsync over SSH. It needs `rsync` on

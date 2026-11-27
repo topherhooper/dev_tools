@@ -1,0 +1,37 @@
+# Network watch — which programs on the household computers use the network.
+#
+# scripts/netwatch/netwatch.py runs on each computer and POSTs a small report to the
+# webhook below every few minutes: programs newly talking to the internet or newly
+# accepting connections, anything doing so from a temp folder, and Microsoft
+# Defender's status on Windows. Nothing machine-specific is written here; a computer
+# appears when its watcher first reports. The webhook id is a secret because knowing
+# it is all it takes to post a report (from the home network only).
+#
+# sensor.network_watch
+#   state      number of computers that have reported
+#   machines   {host: {name, os, seen, talkers, listeners, learning_until,
+#              findings: [{id, kind, name, path, detail, first_seen}], antivirus}}
+#
+# The alerts are rules in custom_templates/network_watch.jinja, pulled into
+# house_alerts.jinja, so they notify through the one existing House Alerts automation.
+
+template:
+  - triggers:
+      - trigger: webhook
+        webhook_id: !secret netwatch_webhook_id
+        allowed_methods:
+          - POST
+        local_only: true
+    sensor:
+      - name: Network Watch
+        unique_id: network_watch
+        icon: mdi:shield-search
+        state: >-
+          {% from 'network_watch.jinja' import merge_report %}
+          {{ merge_report(state_attr('sensor.network_watch', 'machines'),
+                          trigger.json, as_timestamp(now())) | from_json | count }}
+        attributes:
+          machines: >-
+            {% from 'network_watch.jinja' import merge_report %}
+            {{ merge_report(state_attr('sensor.network_watch', 'machines'),
+                            trigger.json, as_timestamp(now())) | from_json }}

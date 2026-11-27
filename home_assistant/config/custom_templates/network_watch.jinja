@@ -1,0 +1,125 @@
+{#-
+  Network watch: what scripts/netwatch/netwatch.py on each computer reports about the
+  programs using the network there.
+
+  Each computer POSTs a report to a webhook; packages/network_watch.yaml keeps the
+  latest one per computer in sensor.network_watch (attribute `machines`). Which
+  computers exist is decided by where the watcher is installed, so no hostname or
+  address is written in this (public) repo.
+
+  Thresholds live in net_thresholds() and are used by both the alerts and the
+  Network watch card on the Monitoring Hub.
+
+  Editing note: HA caches this file. After changing it, call
+  homeassistant.reload_custom_templates (or restart) or the old copy keeps running.
+-#}
+
+{%- macro net_thresholds() -%}
+  {#- stale_h: a computer silent this long (asleep, off) no longer raises its old
+      findings. forget_days: a computer silent this long is dropped from the list.
+      definitions_days: antivirus definitions older than this are worth a warning. -#}
+  {{- {'stale_h': 26, 'forget_days': 30, 'definitions_days': 7} | to_json -}}
+{%- endmacro -%}
+
+{#-
+  Fold one webhook report into the stored map {host: entry} and return it as JSON.
+  Only known fields are copied, each cut to a sane length, because anything on the
+  home network that learns the webhook address can post to it.
+-#}
+{%- macro merge_report(old, payload, now_ts) -%}
+  {%- set t = net_thresholds() | from_json -%}
+  {%- set ns = namespace(out={}, findings=[]) -%}
+  {%- for host, entry in (old or {}).items() -%}
+    {%- if now_ts - (entry.seen | default(0)) < t.forget_days * 86400 -%}
+      {%- set ns.out = dict(ns.out, **{host: entry}) -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- set host = ((payload.host | default('', true) | string | lower
+                   | regex_replace('[^a-z0-9]+', '_'))[:40]) if payload is mapping else '' -%}
+  {%- if host -%}
+    {%- set raw = payload.findings if payload.findings is defined and payload.findings is iterable
+                  and payload.findings is not string and payload.findings is not mapping else [] -%}
+    {%- for f in raw[:20] if f is mapping -%}
+      {%- set ns.findings = ns.findings + [{
+            'id': (f.id | default('') | string)[:16],
+            'kind': (f.kind | default('') | string)[:12],
+            'name': (f.name | default('') | string)[:60],
+            'path': (f.path | default('') | string)[:200],
+            'detail': (f.detail | default('') | string)[:80],
+            'first_seen': f.first_seen | default(0) | int(0)}] -%}
+    {%- endfor -%}
+    {%- set av = payload.antivirus if payload.antivirus is defined and payload.antivirus is mapping
+                 else none -%}
+    {%- set entry = {
+          'name': (payload.name | default(host, true) | string)[:40],
+          'os': (payload.os | default('') | string)[:20],
+          'seen': now_ts | int,
+          'talkers': payload.talkers | default(0) | int(0),
+          'listeners': payload.listeners | default(0) | int(0),
+          'learning_until': payload.learning_until | default(none) | int(none),
+          'findings': ns.findings,
+          'antivirus': none if av is none else {
+            'realtime': av.realtime if av.realtime is defined and av.realtime is boolean else none,
+            'mode': (av.mode | default('', true) | string)[:30],
+            'definitions_age_days': av.definitions_age_days | default(none) | int(none),
+            'threats_7d': av.threats_7d | default(none) | int(none)}} -%}
+    {%- set ns.out = dict(ns.out, **{host: entry}) -%}
+  {%- endif -%}
+  {{- ns.out | to_json -}}
+{%- endmacro -%}
+
+{#-
+  Alerts in the house_alerts shape: a JSON array of {id, sev, icon, title, detail}.
+  The watcher keeps a finding in its report for a day, so each one notifies once
+  through House Alerts and then clears by itself.
+-#}
+{%- macro network_alerts() -%}
+  {%- set t = net_thresholds() | from_json -%}
+  {%- set machines = state_attr('sensor.network_watch', 'machines') -%}
+  {%- set ns = namespace(items=[]) -%}
+  {%- for host, m in (machines if machines is mapping else {}).items() -%}
+    {%- if as_timestamp(now()) - (m.seen | default(0)) < t.stale_h * 3600 -%}
+      {%- for f in m.findings | default([]) -%}
+        {%- if f.kind == 'temp' -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_' ~ f.id, 'sev': 'warn', 'icon': 'mdi:shield-alert',
+                'title': 'Program in a temp folder is online — ' ~ m.name,
+                'detail': f.path ~ ' · ' ~ f.detail}] -%}
+        {%- elif f.kind == 'listener' -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_' ~ f.id, 'sev': 'warn', 'icon': 'mdi:lan-pending',
+                'title': 'New program accepting connections — ' ~ m.name,
+                'detail': f.name ~ ' · ' ~ f.detail}] -%}
+        {%- else -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_' ~ f.id, 'sev': 'info', 'icon': 'mdi:web',
+                'title': 'New program using the internet — ' ~ m.name,
+                'detail': f.name ~ ' · ' ~ f.detail}] -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- set av = m.antivirus -%}
+      {%- if av is mapping -%}
+        {#- Defender steps aside ("Passive") when another antivirus is installed. -#}
+        {%- if av.realtime is false and 'passive' not in (av.mode or '') | lower -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_av_off', 'sev': 'alert', 'icon': 'mdi:shield-off',
+                'title': 'Antivirus is off — ' ~ m.name,
+                'detail': 'Microsoft Defender real-time protection is disabled'}] -%}
+        {%- endif -%}
+        {%- if (av.threats_7d or 0) > 0 -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_av_threat', 'sev': 'alert', 'icon': 'mdi:shield-bug',
+                'title': 'Antivirus caught something — ' ~ m.name,
+                'detail': av.threats_7d ~ ' detection(s) in the last 7 days · open Windows Security'}] -%}
+        {%- endif -%}
+        {%- if (av.definitions_age_days or 0) > t.definitions_days -%}
+          {%- set ns.items = ns.items + [{
+                'id': 'net_' ~ host ~ '_av_old', 'sev': 'warn', 'icon': 'mdi:shield-sync',
+                'title': 'Antivirus definitions out of date — ' ~ m.name,
+                'detail': av.definitions_age_days ~ ' days old'}] -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {{- ns.items | to_json -}}
+{%- endmacro -%}
