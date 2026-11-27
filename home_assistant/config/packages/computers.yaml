@@ -1,14 +1,16 @@
 # Computers — online/offline and basic health for the household PCs.
 #
 # Each machine runs Glances in web-server mode and is added in the UI through the
-# Glances integration (Settings > Devices & services). Nothing machine-specific is
+# Glances integration (Settings > Devices & services). A machine nothing can be
+# installed on, such as a work laptop, is added through the Ping integration
+# instead and gets online/offline only. Nothing machine-specific is
 # written here: a device joins by getting the `computer` label, and
 # `computer_always_on` marks the ones that should alert when they go offline.
 # See custom_templates/computers.jinja for how readings and thresholds are worked out.
 #
 # sensor.computers
 #   state      number of labelled computers that are online
-#   machines   list of {id, name, always_on, online, offline_min, cpu, mem, disk,
+#   machines   list of {id, name, monitor, always_on, online, offline_min, cpu, mem, disk,
 #              disk_label, temp, temp_unit, temp_hot}
 #
 # The alerts themselves (offline, disk, memory, overheating) are rules in

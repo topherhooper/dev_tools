@@ -4,15 +4,21 @@
   Which machines count is decided in the Home Assistant UI, not here, so no hostname
   or address ever lands in this (public) repo:
 
-    label `computer`            put it on each Glances device to monitor it
+    label `computer`            put it on each device to monitor
     label `computer_always_on`  also add it to machines that should never be off
                                  (a server, the living-room box); only these alert
                                  when they go offline
 
-  Glances names its sensors after their translation keys, so a device's entities are
-  picked out by entity_id suffix: `_cpu_usage`, `_memory_usage`, `_disk_usage` and
-  `_temperature`. A Glances host that stops answering turns all of its entities
-  `unavailable`, which is how "offline" is detected; no separate ping is needed.
+  Two kinds of device can carry the label:
+
+    Glances device   a machine running Glances: status plus CPU, memory, disk, temperature.
+                     Glances names its sensors after their translation keys, so they are
+                     picked out by entity_id suffix: `_cpu_usage`, `_memory_usage`,
+                     `_disk_usage`, `_temperature`. A host that stops answering turns all
+                     of them `unavailable`, which is how "offline" is detected.
+    Ping device      a machine nothing can be installed on (a work laptop): status only,
+                     from the Ping integration's connectivity binary_sensor. A sleeping
+                     laptop does not answer ping, so it reads offline while asleep.
 
   Thresholds live in pc_thresholds() below and are used by both house_alerts.jinja (the alerts) and the
   Computers card on the Monitoring Hub, so the card and the alert cannot disagree.
@@ -29,7 +35,7 @@
 
 {#-
   Returns a JSON array, one entry per labelled device, sorted by name:
-    {id, name, always_on, online, offline_min, cpu, mem, disk, disk_label,
+    {id, name, monitor, always_on, online, offline_min, cpu, mem, disk, disk_label,
      temp, temp_unit, temp_hot}
   Missing readings are null, so a machine without temperature sensors (most
   Windows PCs) simply shows none instead of inventing an alert.
@@ -41,7 +47,9 @@
   {%- for dev in label_devices('computer') -%}
     {%- set dev_name = device_attr(dev, 'name_by_user') or device_attr(dev, 'name') -%}
     {%- set ents = device_entities(dev) | select('match', 'sensor\\.') | list -%}
-    {%- set cpu_e = ents | select('search', '_cpu_usage$') | first -%}
+    {#- `| first` on an empty list logs a warning on every render, hence the lists. -#}
+    {%- set cpu_l = ents | select('search', '_cpu_usage$') | list -%}
+    {%- set cpu_e = cpu_l[0] if cpu_l else none -%}
     {#- GPUs also report "<gpu> memory usage"; system memory has the shortest id. -#}
     {%- set mem_list = ents | select('search', '_memory_usage$') | list -%}
     {%- set mn = namespace(e=none) -%}
@@ -49,12 +57,22 @@
       {%- if mn.e is none or e | length < mn.e | length -%}{%- set mn.e = e -%}{%- endif -%}
     {%- endfor -%}
 
-    {#- Online when any of its sensors still has a value. -#}
-    {%- set live = ents | select('has_value') | list -%}
-    {%- set online = live | count > 0 -%}
+    {#- A device with a connectivity binary_sensor (the Ping integration) is watched
+        from the network only: that sensor is the whole truth. Otherwise it is a
+        Glances device, online while any of its sensors still has a value. -#}
+    {%- set ping_l = device_entities(dev) | select('match', 'binary_sensor\\.')
+                     | select('is_state_attr', 'device_class', 'connectivity') | list -%}
+    {%- set ping_e = ping_l[0] if ping_l else none -%}
+    {%- if ping_e -%}
+      {%- set online = is_state(ping_e, 'on') -%}
+      {%- set since_e = ping_e -%}
+    {%- else -%}
+      {%- set online = ents | select('has_value') | list | count > 0 -%}
+      {%- set since_e = cpu_e -%}
+    {%- endif -%}
     {%- set offline_min = none -%}
-    {%- if not online and cpu_e -%}
-      {%- set offline_min = ((now() - states[cpu_e].last_changed).total_seconds() / 60) | round(0) | int -%}
+    {%- if not online and since_e and states[since_e] is not none -%}
+      {%- set offline_min = ((now() - states[since_e].last_changed).total_seconds() / 60) | round(0) | int -%}
     {%- endif -%}
 
     {%- set cpu = states(cpu_e) | float(none) if cpu_e else none -%}
@@ -85,6 +103,7 @@
     {%- set ns.items = ns.items + [{
           'id': dev,
           'name': dev_name,
+          'monitor': 'network' if ping_e else 'agent',
           'always_on': dev in always_on,
           'online': online,
           'offline_min': offline_min,

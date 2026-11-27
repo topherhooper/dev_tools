@@ -126,6 +126,12 @@ To add a machine:
 3. Open the new device and give it the label `computer`. Add `computer_always_on` as well if it
    should alert when it goes offline; leave that off for machines that sleep or get shut down.
 
+A computer nothing can be installed on, such as a work laptop, is monitored from the network
+instead: add it with the Ping integration (Add integration > Ping, its address) and give that
+device the `computer` label. It shows online or offline only, marked "network only", and a
+sleeping laptop reads as offline. Reserve each address in the router, since Ping follows an
+address rather than a machine.
+
 No hostnames or addresses are kept in this repo; the labels decide what is monitored.
 Thresholds are in `config/custom_templates/computers.jinja`.
 
