@@ -136,5 +136,10 @@
     {%- endif -%}
   {%- endfor -%}
 
+  {#- Network watch: programs newly using the network on each computer, and
+      antivirus status. Rules and thresholds are in network_watch.jinja. -#}
+  {%- from 'network_watch.jinja' import network_alerts -%}
+  {%- set ns.items = ns.items + (network_alerts() | from_json) -%}
+
   {{- ns.items | to_json -}}
 {%- endmacro -%}

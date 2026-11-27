@@ -370,3 +370,39 @@ views:
               green: 50
               yellow: 10
               red: -150
+      - cards:
+          - type: heading
+            heading: Network watch
+          # Rendered from sensor.network_watch: a computer appears here once the
+          # watcher in scripts/netwatch is installed on it and has reported.
+          - type: markdown
+            content: |-
+              {% from 'network_watch.jinja' import net_thresholds -%}
+              {% set t = net_thresholds() | from_json -%}
+              {% set pcs = state_attr('sensor.network_watch', 'machines') or {} -%}
+              {% if pcs | count == 0 -%}
+              No computers are reporting yet. Install the watcher from
+              `scripts/netwatch` on each computer.
+              {%- else -%}
+              | Computer | Last report | Programs online | Accepting connections | Antivirus | New |
+              |:--|:--|--:|--:|:--|:--|
+              {% for host, m in pcs.items() | sort(attribute='1.name') -%}
+              {% set age = (as_timestamp(now()) - m.seen) | int -%}
+              {% set av = m.antivirus -%}
+              | **{{ m.name }}** |
+              {%- if age < 900 %} 🟢 just now
+              {%- elif age < 3600 %} {{ age // 60 }} min ago
+              {%- elif age < t.stale_h * 3600 %} {{ age // 3600 }} h ago
+              {%- else %} ⚪ {{ age // 86400 }} d ago{% endif %} |
+              {{- ' ' ~ m.talkers }} |
+              {{- ' ' ~ m.listeners }} |
+              {%- if av is not mapping %} –
+              {%- elif av.realtime is false and 'passive' not in (av.mode or '') | lower %} 🔴 Off
+              {%- elif (av.threats_7d or 0) > 0 %} 🔴 {{ av.threats_7d }} caught
+              {%- elif (av.definitions_age_days or 0) > t.definitions_days %} 🟡 Out of date
+              {%- else %} 🟢 On{% endif %} |
+              {%- if m.learning_until %} learning until {{ m.learning_until | timestamp_custom('%b %-d') }}
+              {%- elif m.findings | count == 0 %} –
+              {%- else %} {{ m.findings | map(attribute='name') | unique | join(', ') }}{% endif %} |
+              {% endfor %}
+              {%- endif %}
