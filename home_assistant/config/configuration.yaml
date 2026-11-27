@@ -31,6 +31,12 @@ lovelace:
       icon: mdi:monitor-dashboard
       show_in_sidebar: true
       filename: dashboards/monitoring-hub.yaml
+    computers-network:
+      mode: yaml
+      title: Computers & Network
+      icon: mdi:desktop-tower-monitor
+      show_in_sidebar: true
+      filename: dashboards/computers-network.yaml
 
 logger:
   default: warning

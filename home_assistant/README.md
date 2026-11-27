@@ -111,9 +111,16 @@ Cloud, are the simpler routes, and either wants backup encryption switched on fi
 ## Dashboards
 
 Home is edited in the HA UI and lives in `.storage`, so only the backups hold it.
-Monitoring Hub is in YAML mode: `config/dashboards/monitoring-hub.yaml`, registered under
-`lovelace:` in `configuration.yaml`. Edit the file, deploy, then pick **Refresh** from the
-dashboard's menu; the UI editor is disabled for it. Utilities is deliberately not here:
+Two dashboards are in YAML mode, registered under `lovelace:` in `configuration.yaml`:
+
+- Monitoring Hub (`config/dashboards/monitoring-hub.yaml`) is for the house itself:
+  climate, air quality, appliances.
+- Computers & Network (`config/dashboards/computers-network.yaml`) is for the household
+  computers and the network watch. Anything about a computer goes here, not on the hub.
+
+Edit the file, deploy, then pick **Refresh** from the dashboard's menu; the UI editor is
+disabled for these. A newly registered dashboard only appears after a restart
+(`make deploy ARGS=--restart`). Utilities is deliberately not here:
 its charts hardcode the household's utility usage and this repo is public.
 
 Adding a YAML dashboard under a URL that a UI-managed one already uses needs a restart,
