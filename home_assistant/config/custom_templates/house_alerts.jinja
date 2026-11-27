@@ -31,7 +31,8 @@
   {%- set RH_MIN = 30 -%}
   {%- set RH_MAX = 60 -%}
   {%- set TONER_MIN = 10 -%}
-  {%- set BACKUP_MAX_AGE_H = 48 -%}
+  {#- Backups are weekly (Sunday 04:15), so stale means a week plus a day's grace. -#}
+  {%- set BACKUP_MAX_AGE_H = 192 -%}
   {%- set DUST_MITE_RH_MAX = 50 -%}
 
   {%- set ns = namespace(items=[]) -%}
