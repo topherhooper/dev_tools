@@ -372,32 +372,6 @@ views:
               red: -150
       - cards:
           - type: heading
-            heading: Computers
-          # Rendered from sensor.computers, so a machine appears here as soon as its
-          # Glances or Ping device gets the `computer` label; nothing to edit in this file.
-          - type: markdown
-            content: |-
-              {% set pcs = state_attr('sensor.computers', 'machines') or [] -%}
-              {% if pcs | count == 0 -%}
-              No computers yet. Add a machine with the Glances integration (or Ping, for
-              one you cannot install on), then give its device the label `computer`.
-              {%- else -%}
-              | Computer | Status | CPU | Memory | Disk | Temp |
-              |:--|:--|--:|--:|--:|--:|
-              {% for pc in pcs -%}
-              | **{{ pc.name }}** |
-              {%- if pc.online %} 🟢 Online
-              {%- elif pc.offline_min is not none %} 🔴 Offline {{ pc.offline_min }} min
-              {%- else %} 🔴 Offline{% endif %}
-              {{- ' · network only' if pc.monitor == 'network' else '' }} |
-              {{- ' ' ~ pc.cpu ~ '%' if pc.cpu is not none else ' –' }} |
-              {{- ' ' ~ pc.mem ~ '%' if pc.mem is not none else ' –' }} |
-              {{- ' ' ~ pc.disk ~ '%' if pc.disk is not none else ' –' }} |
-              {{- ' ' ~ pc.temp ~ (pc.temp_unit or '') if pc.temp is not none else ' –' }} |
-              {% endfor %}
-              {%- endif %}
-      - cards:
-          - type: heading
             heading: Network watch
           # Rendered from sensor.network_watch: a computer appears here once the
           # watcher in scripts/netwatch is installed on it and has reported.

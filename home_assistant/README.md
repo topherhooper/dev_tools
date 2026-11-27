@@ -123,7 +123,8 @@ Delete the stored copy under Settings → Dashboards once the YAML one looks rig
 ## Computers
 
 `config/packages/computers.yaml` watches the household PCs: online or offline, CPU, memory,
-fullest disk and hottest temperature sensor, shown in the Computers section of the Monitoring Hub.
+fullest disk and hottest temperature sensor. The card is `config/dashboards/cards/computers.yaml`,
+included as a section by the dashboard that shows it.
 Alerts (always-on machine offline 15 min, disk at 90%/97%, memory at 95%, anything over 90 °C)
 go through the existing House Alerts notification.
 
